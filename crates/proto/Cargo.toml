@@ -1,0 +1,12 @@
+[package]
+name = "cacp-proto"
+description = "ACP v1 wire types and method names"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
