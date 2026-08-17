@@ -1,0 +1,17 @@
+[package]
+name = "cacp-interop"
+description = "Runs cacp against the reference implementation, both roles"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dev-dependencies]
+agent-client-protocol = { version = "2", features = ["unstable"] }
+cacp.workspace = true
+futures = "0.3.34"
+serde_json.workspace = true
+tokio = { workspace = true, features = ["io-util", "macros", "rt-multi-thread", "sync", "time"] }
+tokio-util = { version = "0.7", features = ["compat"] }
