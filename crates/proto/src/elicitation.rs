@@ -1,24 +1,32 @@
 //! `elicitation/*` — the agent asking the user for structured input, either as
 //! a form described by a JSON-Schema subset or as a URL to visit.
 
-use crate::{ElicitationId, RequestId, SessionId, ToolCallId};
+use crate::{ElicitationId, Meta, RequestId, SessionId, ToolCallId};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ElicitationCapabilities {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub form: Option<ElicitationFormCapabilities>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub url: Option<ElicitationUrlCapabilities>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ElicitationFormCapabilities {}
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ElicitationFormCapabilities {
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
+}
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ElicitationUrlCapabilities {}
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ElicitationUrlCapabilities {
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +34,8 @@ pub struct CreateElicitationRequest {
     #[serde(flatten)]
     pub mode: ElicitationMode,
     pub message: String,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 /// `Other` preserves a mode this revision doesn't know, so it can be declined
@@ -93,6 +103,8 @@ pub struct ElicitationRequestScope {
 pub struct CreateElicitationResponse {
     #[serde(flatten)]
     pub action: ElicitationAction,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -131,10 +143,12 @@ pub enum ElicitationContentValue {
 }
 
 /// Tells the client a URL-mode elicitation finished out of band.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CompleteElicitationNotification {
     pub elicitation_id: ElicitationId,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 /// The JSON-Schema subset a form elicitation may describe.
@@ -151,6 +165,8 @@ pub struct ElicitationSchema {
     pub properties: BTreeMap<String, ElicitationPropertySchema>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub required: Option<Vec<String>>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -172,7 +188,7 @@ pub enum ElicitationPropertySchema {
     Other(OtherPropertySchema),
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StringPropertySchema {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -193,6 +209,8 @@ pub struct StringPropertySchema {
     pub enum_values: Option<Vec<String>>,
     #[serde(rename = "oneOf", default, skip_serializing_if = "Option::is_none")]
     pub one_of: Option<Vec<EnumOption>>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -217,9 +235,11 @@ pub struct NumberPropertySchema {
     pub maximum: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default: Option<f64>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IntegerPropertySchema {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -232,9 +252,11 @@ pub struct IntegerPropertySchema {
     pub maximum: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default: Option<i64>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BooleanPropertySchema {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -243,9 +265,11 @@ pub struct BooleanPropertySchema {
     pub description: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default: Option<bool>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MultiSelectPropertySchema {
     pub items: MultiSelectItems,
@@ -259,9 +283,11 @@ pub struct MultiSelectPropertySchema {
     pub max_items: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default: Option<Vec<String>>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum MultiSelectItems {
     String(StringMultiSelectItems),
@@ -271,16 +297,20 @@ pub enum MultiSelectItems {
     Other(OtherPropertySchema),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StringMultiSelectItems {
     #[serde(rename = "enum")]
     pub values: Vec<String>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TitledMultiSelectItems {
     #[serde(rename = "anyOf")]
     pub options: Vec<EnumOption>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 /// A property or item shape this revision doesn't model, kept verbatim.
@@ -293,11 +323,13 @@ pub struct OtherPropertySchema {
     pub fields: BTreeMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EnumOption {
     #[serde(rename = "const")]
     pub value: String,
     pub title: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }

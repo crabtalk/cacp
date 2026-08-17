@@ -10,6 +10,7 @@ impl Agent for Echo {
             agent_capabilities: Default::default(),
             auth_methods: Vec::new(),
             agent_info: None,
+            meta: None,
         })
     }
 
@@ -21,6 +22,7 @@ impl Agent for Echo {
             session_id: "session-1".into(),
             modes: None,
             config_options: None,
+            meta: None,
         })
     }
 

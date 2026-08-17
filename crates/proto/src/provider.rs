@@ -1,6 +1,6 @@
 //! Pointing the agent at a different LLM endpoint.
 
-use crate::ProviderId;
+use crate::{Meta, ProviderId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -19,7 +19,7 @@ pub enum LlmProtocol {
     Other(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderInfo {
     pub provider_id: ProviderId,
@@ -28,26 +28,35 @@ pub struct ProviderInfo {
     pub required: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub current: Option<ProviderCurrentConfig>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 /// What the provider is pointed at right now.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderCurrentConfig {
     pub api_type: LlmProtocol,
     pub base_url: String,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ListProvidersRequest {}
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct ListProvidersRequest {
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
+}
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ListProvidersResponse {
     pub providers: Vec<ProviderInfo>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SetProviderRequest {
     pub provider_id: ProviderId,
@@ -55,6 +64,8 @@ pub struct SetProviderRequest {
     pub base_url: String,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub headers: HashMap<String, String>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 impl SetProviderRequest {
@@ -68,18 +79,27 @@ impl SetProviderRequest {
             api_type,
             base_url: base_url.into(),
             headers: HashMap::new(),
+            meta: None,
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SetProviderResponse {}
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct SetProviderResponse {
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
+}
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DisableProviderRequest {
     pub provider_id: ProviderId,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct DisableProviderResponse {}
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct DisableProviderResponse {
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
+}

@@ -1,7 +1,7 @@
 //! Version and capability negotiation, and authentication.
 
 use crate::{
-    AuthMethodId, ClientNesCapabilities, ElicitationCapabilities, NesCapabilities,
+    AuthMethodId, ClientNesCapabilities, ElicitationCapabilities, Meta, NesCapabilities,
     PositionEncodingKind,
 };
 use serde::{Deserialize, Serialize};
@@ -25,8 +25,11 @@ impl Default for ProtocolVersion {
 }
 
 /// An empty object whose presence is itself the capability flag.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Capability {}
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Capability {
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -36,6 +39,8 @@ pub struct InitializeRequest {
     pub client_capabilities: ClientCapabilities,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub client_info: Option<Implementation>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 impl InitializeRequest {
@@ -44,6 +49,7 @@ impl InitializeRequest {
             protocol_version: ProtocolVersion::LATEST,
             client_capabilities,
             client_info: None,
+            meta: None,
         }
     }
 }
@@ -58,16 +64,20 @@ pub struct InitializeResponse {
     pub auth_methods: Vec<AuthMethod>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agent_info: Option<Implementation>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 /// Name and version of the program on either end.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Implementation {
     pub name: String,
     pub version: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -93,41 +103,51 @@ pub struct ClientCapabilities {
     /// [`Position`](crate::Position), best first.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub position_encodings: Vec<PositionEncodingKind>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 /// Which [`AuthMethod`] variants the agent may offer. A client that cannot
 /// run a terminal must not be handed [`AuthMethod::Terminal`].
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientAuthCapabilities {
     #[serde(default)]
     pub terminal: bool,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileSystemCapabilities {
     #[serde(default)]
     pub read_text_file: bool,
     #[serde(default)]
     pub write_text_file: bool,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientSessionCapabilities {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config_options: Option<SessionConfigOptionsCapabilities>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionConfigOptionsCapabilities {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub boolean: Option<Capability>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentCapabilities {
     #[serde(default)]
@@ -148,9 +168,11 @@ pub struct AgentCapabilities {
     /// [`position_encodings`](ClientCapabilities::position_encodings).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position_encoding: Option<PositionEncodingKind>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PromptCapabilities {
     #[serde(default)]
@@ -159,18 +181,26 @@ pub struct PromptCapabilities {
     pub audio: bool,
     #[serde(default)]
     pub embedded_context: bool,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpCapabilities {
     #[serde(default)]
     pub http: bool,
     #[serde(default)]
     pub sse: bool,
+    /// Whether the agent can reach an MCP server the client already holds,
+    /// through [`McpServer::Acp`](crate::McpServer::Acp) and `mcp/*`.
+    #[serde(default)]
+    pub acp: bool,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionCapabilities {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -185,26 +215,28 @@ pub struct SessionCapabilities {
     pub resume: Option<Capability>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub close: Option<Capability>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentAuthCapabilities {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub logout: Option<Capability>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 /// A way to sign in. [`Agent`](AuthMethod::Agent) is the untagged fallback:
 /// methods that predate the `type` tag still arrive without one, and they
 /// mean "the agent handles this itself".
 ///
-/// Only offer [`EnvVar`](AuthMethod::EnvVar) or
-/// [`Terminal`](AuthMethod::Terminal) to a client that advertised
+/// Only offer [`Terminal`](AuthMethod::Terminal) to a client that advertised
 /// [`ClientAuthCapabilities`].
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AuthMethod {
-    EnvVar(AuthMethodEnvVar),
     Terminal(AuthMethodTerminal),
     #[serde(untagged)]
     Agent(AuthMethodAgent),
@@ -213,7 +245,6 @@ pub enum AuthMethod {
 impl AuthMethod {
     pub fn id(&self) -> &AuthMethodId {
         match self {
-            Self::EnvVar(method) => &method.id,
             Self::Terminal(method) => &method.id,
             Self::Agent(method) => &method.id,
         }
@@ -221,7 +252,6 @@ impl AuthMethod {
 
     pub fn name(&self) -> &str {
         match self {
-            Self::EnvVar(method) => &method.name,
             Self::Terminal(method) => &method.name,
             Self::Agent(method) => &method.name,
         }
@@ -229,7 +259,6 @@ impl AuthMethod {
 
     pub fn description(&self) -> Option<&str> {
         match self {
-            Self::EnvVar(method) => method.description.as_deref(),
             Self::Terminal(method) => method.description.as_deref(),
             Self::Agent(method) => method.description.as_deref(),
         }
@@ -238,58 +267,19 @@ impl AuthMethod {
 
 /// The agent signs in on its own — an API key already in its environment, or
 /// an OAuth flow it opens a browser for.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthMethodAgent {
     pub id: AuthMethodId,
     pub name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-}
-
-/// The client collects values from the user and passes them to the agent as
-/// environment variables.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AuthMethodEnvVar {
-    pub id: AuthMethodId,
-    pub name: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    pub vars: Vec<AuthEnvVar>,
-    /// Where the user can go to obtain the credentials.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub link: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AuthEnvVar {
-    pub name: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-    /// Secret by default — a client that guesses wrong echoes an API key to
-    /// the screen.
-    #[serde(default = "yes", skip_serializing_if = "is_yes")]
-    pub secret: bool,
-    #[serde(default, skip_serializing_if = "is_no")]
-    pub optional: bool,
-}
-
-fn yes() -> bool {
-    true
-}
-
-fn is_yes(value: &bool) -> bool {
-    *value
-}
-
-fn is_no(value: &bool) -> bool {
-    !*value
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 /// The client runs a terminal for the user to sign in interactively.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthMethodTerminal {
     pub id: AuthMethodId,
@@ -300,19 +290,32 @@ pub struct AuthMethodTerminal {
     pub args: Vec<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub env: HashMap<String, String>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthenticateRequest {
     pub method_id: AuthMethodId,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AuthenticateResponse {}
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct AuthenticateResponse {
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
+}
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct LogoutRequest {}
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct LogoutRequest {
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
+}
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct LogoutResponse {}
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct LogoutResponse {
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
+}

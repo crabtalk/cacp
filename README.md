@@ -22,6 +22,12 @@ with no builder layer and no macros:
 - **A slow handler does not stall the stream.** Requests are spawned, so
   blocking on a permission prompt while the user makes up their mind does not
   hold up the updates queued behind it.
+- **A newer peer does not break you.** Update kinds, content blocks, tool call
+  content, plan payloads and enum values this revision does not know arrive in
+  an `Other` variant and round-trip whole, rather than failing the message they
+  came in.
+- **Dropping a call cancels it.** Walk away from a request future and the peer
+  gets `$/cancel_request` instead of finishing work nobody is waiting for.
 
 ## Crates
 
@@ -68,6 +74,7 @@ impl Agent for Echo {
             agent_capabilities: Default::default(),
             auth_methods: Vec::new(),
             agent_info: None,
+            meta: None,
         })
     }
 
@@ -76,6 +83,7 @@ impl Agent for Echo {
             session_id: "session-1".into(),
             modes: None,
             config_options: None,
+            meta: None,
         })
     }
 
@@ -152,13 +160,20 @@ compiled on every build rather than left to rot.
 
 ## Coverage
 
-Every v1 method name, on both sides. Beyond the stable core, all nine areas the
+Every v1 method name, on both sides. Beyond the stable core, all eight areas the
 spec still marks unstable are implemented: session fork, LLM providers, plan
 operations, next edit suggestions, end-of-turn token usage, tool call names,
-auth methods, elicitation, and MCP over ACP.
+auth methods, and MCP over ACP.
 
-Not there yet: `_meta` and the `_`-prefixed extension methods. cacp round-trips
-drop `_meta`, and there is no hook for serving an extension method.
+Both extension mechanisms work: `_meta` is a field on every message that carries
+it in the spec, read and written untouched, and `_`-prefixed methods reach
+`ext_request` / `ext_notification` on either role — which decline by default,
+like every other optional method.
+
+Not there yet: the leniency upstream applies field by field, where a malformed
+optional field falls back to its default and a bad array item is skipped rather
+than failing the message around it. Unknown *shapes* are handled — that is what
+the `Other` variants are for — but malformed ones are still an error.
 
 ## License
 

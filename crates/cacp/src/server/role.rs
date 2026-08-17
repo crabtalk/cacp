@@ -251,6 +251,27 @@ pub trait Agent: Send + Sync + 'static {
         async {}
     }
 
+    /// Answer a method the spec does not define — anything the client sends
+    /// with a `_`-prefixed name. Declines by default.
+    fn ext_request(
+        &self,
+        method: String,
+        params: serde_json::Value,
+    ) -> impl Future<Output = proto::Result<serde_json::Value>> + Send {
+        let _ = params;
+        async move { Err(proto::Error::method_not_found().data(method)) }
+    }
+
+    /// The same, for a notification. Ignored by default.
+    fn ext_notification(
+        &self,
+        method: String,
+        params: serde_json::Value,
+    ) -> impl Future<Output = ()> + Send {
+        let _ = (method, params);
+        async {}
+    }
+
     /// Route one incoming call. Provided — do not override.
     fn dispatch(
         &self,
@@ -281,7 +302,7 @@ pub trait Agent: Send + Sync + 'static {
                 method::NES_SUGGEST => encode(self.suggest_nes(decode(params)?).await?),
                 method::NES_CLOSE => encode(self.close_nes(decode(params)?).await?),
                 method::MCP_MESSAGE => encode(self.message_mcp(decode(params)?).await?),
-                _ => Err(proto::Error::method_not_found().data(method)),
+                _ => self.ext_request(method, params).await,
             }
         }
     }
@@ -339,7 +360,7 @@ pub trait Agent: Send + Sync + 'static {
                         self.notify_mcp(notification).await;
                     }
                 }
-                _ => {}
+                _ => self.ext_notification(method, params).await,
             }
         }
     }

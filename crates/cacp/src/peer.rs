@@ -4,7 +4,7 @@ use crate::{
     codec::{self, Message},
     handler::Handler,
 };
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{Serialize, de::DeserializeOwned};
 use std::{
     collections::HashMap,
     sync::{
@@ -92,8 +92,16 @@ impl Peer {
             return Err(disconnected());
         }
 
-        let value = rx.await.map_err(|_| disconnected())??;
-        Ok(serde_json::from_value(value)?)
+        // Dropping this future before the answer arrives means the caller
+        // stopped caring; tell the peer so it can stop working too.
+        let abandon = Abandon {
+            peer: self,
+            id: id.clone(),
+            armed: true,
+        };
+        let outcome = rx.await.map_err(|_| disconnected())?;
+        abandon.disarm();
+        Ok(serde_json::from_value(outcome?)?)
     }
 
     /// Tell the other side something. Returns once queued for writing.
@@ -130,6 +138,40 @@ impl Peer {
     }
 }
 
+/// Sends `$/cancel_request` for a call the caller walked away from.
+struct Abandon<'a> {
+    peer: &'a Peer,
+    id: proto::RequestId,
+    armed: bool,
+}
+
+impl Abandon<'_> {
+    fn disarm(mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for Abandon<'_> {
+    fn drop(&mut self) {
+        if !self.armed {
+            return;
+        }
+        self.peer
+            .0
+            .pending
+            .lock()
+            .expect("pending map poisoned")
+            .remove(&self.id);
+        let _ = self.peer.notify(
+            proto::method::CANCEL_REQUEST,
+            proto::CancelRequestNotification {
+                request_id: self.id.clone(),
+                meta: None,
+            },
+        );
+    }
+}
+
 fn disconnected() -> proto::Error {
     proto::Error::internal_error().data("connection closed")
 }
@@ -156,8 +198,9 @@ where
             Ok(Some(message)) => message,
             Ok(None) => break,
             // A malformed frame is the peer's bug, not ours; report and continue.
+            // JSON-RPC answers an unparseable frame with a null id.
             Err(e) => {
-                peer.send(Message::error(None, e));
+                peer.send(Message::error(Some(proto::RequestId::Null), e));
                 continue;
             }
         };
@@ -193,20 +236,20 @@ where
                     .expect("in-flight map poisoned")
                     .insert(id, task.abort_handle());
             }
-            Frame::Invalid => peer.send(Message::error(None, proto::Error::invalid_request())),
+            Frame::Ignore => {}
+            Frame::Invalid => peer.send(Message::error(
+                Some(proto::RequestId::Null),
+                proto::Error::invalid_request(),
+            )),
         }
     }
     peer.fail_all();
 }
 
 fn cancel(in_flight: &InFlight, params: &serde_json::Value) {
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    struct Cancel {
-        request_id: proto::RequestId,
-    }
-
-    let Ok(Cancel { request_id }) = serde_json::from_value(params.clone()) else {
+    let Ok(proto::CancelRequestNotification { request_id, .. }) =
+        serde_json::from_value(params.clone())
+    else {
         return;
     };
     let task = in_flight
@@ -232,6 +275,7 @@ enum Frame {
         id: proto::RequestId,
         outcome: Result<serde_json::Value, proto::Error>,
     },
+    Ignore,
     Invalid,
 }
 
@@ -248,6 +292,9 @@ fn classify(message: Message) -> Frame {
     match (id, method) {
         (Some(id), Some(method)) => Frame::Request { id, method, params },
         (None, Some(method)) => Frame::Notification { method, params },
+        // A reply we cannot correlate — the peer's own error about a frame it
+        // could not parse. Answering it would start a volley of errors.
+        (None, None) if result.is_some() || error.is_some() => Frame::Ignore,
         (Some(id), None) => {
             let outcome = match error {
                 Some(e) => Err(e),

@@ -8,11 +8,23 @@ use proto::method::agent as method;
 pub struct AgentConn(pub Peer);
 
 impl AgentConn {
+    /// Negotiate the protocol. The agent answers with the version it picked,
+    /// which this build refuses unless it is one it speaks — proceeding on a
+    /// version we cannot decode only fails later, and less clearly.
     pub async fn initialize(
         &self,
         request: proto::InitializeRequest,
     ) -> proto::Result<proto::InitializeResponse> {
-        self.0.request(method::INITIALIZE, request).await
+        let response: proto::InitializeResponse =
+            self.0.request(method::INITIALIZE, request).await?;
+        if response.protocol_version != proto::ProtocolVersion::LATEST {
+            return Err(proto::Error::invalid_request().data(format!(
+                "agent chose protocol version {}; this build speaks {}",
+                response.protocol_version.0,
+                proto::ProtocolVersion::LATEST.0
+            )));
+        }
+        Ok(response)
     }
 
     pub async fn authenticate(
@@ -24,7 +36,7 @@ impl AgentConn {
 
     pub async fn logout(&self) -> proto::Result<proto::LogoutResponse> {
         self.0
-            .request(method::LOGOUT, proto::LogoutRequest {})
+            .request(method::LOGOUT, proto::LogoutRequest::default())
             .await
     }
 
@@ -205,5 +217,18 @@ impl AgentConn {
 
     pub fn notify_mcp(&self, notification: proto::MessageMcpNotification) -> proto::Result<()> {
         self.0.notify(method::MCP_MESSAGE, notification)
+    }
+
+    /// Call a method the spec does not define. Names must start with `_`.
+    pub async fn ext_request(
+        &self,
+        method: &str,
+        params: serde_json::Value,
+    ) -> proto::Result<serde_json::Value> {
+        self.0.request(method, params).await
+    }
+
+    pub fn ext_notification(&self, method: &str, params: serde_json::Value) -> proto::Result<()> {
+        self.0.notify(method, params)
     }
 }

@@ -1,6 +1,8 @@
 //! Content blocks — the payload carried by prompts, tool calls and updates.
 
+use crate::Meta;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 /// A single piece of content in a prompt or a message.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -11,6 +13,18 @@ pub enum ContentBlock {
     Audio(AudioContent),
     ResourceLink(ResourceLink),
     Resource(EmbeddedResource),
+    /// A kind this revision does not know. Kept whole so it survives a
+    /// round-trip instead of failing the message it arrived in.
+    #[serde(untagged)]
+    Other(OtherContentBlock),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OtherContentBlock {
+    #[serde(rename = "type")]
+    pub kind: String,
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
 }
 
 impl<T: Into<String>> From<T> for ContentBlock {
@@ -18,6 +32,7 @@ impl<T: Into<String>> From<T> for ContentBlock {
         Self::Text(TextContent {
             text: text.into(),
             annotations: None,
+            meta: None,
         })
     }
 }
@@ -27,6 +42,8 @@ pub struct TextContent {
     pub text: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -39,6 +56,8 @@ pub struct ImageContent {
     pub uri: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -49,6 +68,8 @@ pub struct AudioContent {
     pub mime_type: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 /// A pointer to a resource the agent may fetch, rather than its contents.
@@ -67,6 +88,8 @@ pub struct ResourceLink {
     pub size: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -74,6 +97,8 @@ pub struct EmbeddedResource {
     pub resource: EmbeddedResourceResource,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Annotations>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 /// Untagged: text resources carry `text`, blob resources carry `blob`.
@@ -91,6 +116,8 @@ pub struct TextResourceContents {
     pub text: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -101,6 +128,8 @@ pub struct BlobResourceContents {
     pub blob: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mime_type: Option<String>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -112,6 +141,8 @@ pub struct Annotations {
     pub last_modified: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub priority: Option<f64>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
