@@ -36,6 +36,7 @@ with no builder layer and no macros:
 | `cacp-proto` | ACP v1 wire types, method names, the protocol error | `serde`, `serde_json` |
 | `cacp` | the JSON-RPC connection and both roles | the above, plus `tokio` |
 | `cacp-events` | the client as a channel instead of a trait | `cacp` with `client` |
+| `cacp-agents` | the registry catalog, an installer, and a spawn | the above, plus `ureq` |
 
 Depend on `cacp-proto` alone if all you do is read and write ACP JSON — it is
 data only, and pulls in no async runtime.
@@ -182,6 +183,29 @@ A request you do not match on is declined with `method not found`, the same as
 one you never implemented — so `_ => {}` above serves nothing but updates and
 permission, exactly as its capabilities should say. It is a layer over the
 `Client` trait with no privileged access, which is why it is a separate crate.
+
+## Finding an agent to drive
+
+The protocol publishes a catalog of ACP agents pinned to exact versions.
+[`cacp-agents`](crates/agents) reads it, installs from it, and hands back
+something you can spawn — so an agent's build never changes underfoot the way
+`npx <pkg>@latest` does, and no package manager sits in the chat path.
+
+```rust,ignore
+let catalog = registry::catalog(&cache_dir).expect("a catalog");
+let agent = catalog.agents.iter().find(|a| a.id == "claude-acp").unwrap();
+
+let installed = match Installed::find(&data_dir, &agent.id) {
+    Some(installed) => installed,
+    None => agent.install(&data_dir, |line| println!("{line}"))?,
+};
+
+let (conn, _child) = Launch::from(&installed).spawn(client)?;
+```
+
+It covers the agent as a program — catalog, install, spawn — and stops there.
+What happens over the connection is `cacp`'s half. Reading the catalog and
+running `npm` block, so call them off a worker rather than inside a turn.
 
 ## Coverage
 
