@@ -35,6 +35,7 @@ with no builder layer and no macros:
 | --- | --- | --- |
 | `cacp-proto` | ACP v1 wire types, method names, the protocol error | `serde`, `serde_json` |
 | `cacp` | the JSON-RPC connection and both roles | the above, plus `tokio` |
+| `cacp-events` | the client as a channel instead of a trait | `cacp` with `client` |
 
 Depend on `cacp-proto` alone if all you do is read and write ACP JSON — it is
 data only, and pulls in no async runtime.
@@ -157,6 +158,30 @@ async fn main() -> Result<()> {
 
 Both of these are in [`crates/cacp/examples`](crates/cacp/examples), so they are
 compiled on every build rather than left to rot.
+
+## Driving an agent from an event loop
+
+A frontend has a loop already, so [`cacp-events`](crates/events) hands it one
+rather than a trait to implement — every call from the agent arrives as an
+`Event` on a channel.
+
+```rust,ignore
+let (client, mut events) = cacp_events::channel();
+let (agent, _child) = cacp::spawn(&mut Command::new("my-agent"), client)?;
+
+while let Some(event) = events.recv().await {
+    match event {
+        Event::Update(notification) => draw(notification.update),
+        Event::Permission(request, reply) => reply.send(ask_the_user(request).await),
+        _ => {}
+    }
+}
+```
+
+A request you do not match on is declined with `method not found`, the same as
+one you never implemented — so `_ => {}` above serves nothing but updates and
+permission, exactly as its capabilities should say. It is a layer over the
+`Client` trait with no privileged access, which is why it is a separate crate.
 
 ## Coverage
 

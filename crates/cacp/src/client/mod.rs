@@ -7,6 +7,9 @@
 //! Every optional method of [`Client`] defaults to replying "method not found",
 //! so an agent asking for something you do not serve gets a clean refusal and
 //! carries on.
+//!
+//! A frontend with an event loop of its own can take `cacp-events` instead,
+//! which serves this trait over a channel.
 
 use crate::Peer;
 use serve::Serve;

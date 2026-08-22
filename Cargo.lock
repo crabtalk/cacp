@@ -225,6 +225,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cacp-events"
+version = "0.1.0"
+dependencies = [
+ "cacp",
+ "cacp-proto",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "cacp-interop"
 version = "0.1.0"
 dependencies = [

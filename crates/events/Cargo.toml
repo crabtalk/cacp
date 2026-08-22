@@ -1,0 +1,17 @@
+[package]
+name = "cacp-events"
+description = "A channel-based ACP client for cacp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+cacp = { workspace = true, features = ["client"] }
+proto.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["sync"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "process", "rt-multi-thread"] }
