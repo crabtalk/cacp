@@ -241,10 +241,8 @@ name = "cacp-agents"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "cacp",
  "serde",
  "serde_json",
- "tokio",
  "ureq",
 ]
 

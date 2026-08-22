@@ -14,14 +14,17 @@ use tokio::{
 ///
 /// Only stdin and stdout are taken; stderr is left as the caller configured it,
 /// since a TUI usually wants it captured and a CLI usually does not. The agent
-/// exits when the returned [`Child`] is dropped.
+/// is killed when the returned [`Child`] is dropped.
 pub fn spawn<C: Client>(
     command: &mut Command,
     client: Arc<C>,
 ) -> proto::Result<(AgentConn, Child)> {
+    // Without this the agent outlives its `Child`: dropping the handle does not
+    // signal it, and its stdin belongs to the write loop rather than to us.
     let mut child = command
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
+        .kill_on_drop(true)
         .spawn()?;
 
     let stdin = child

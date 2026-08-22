@@ -36,7 +36,7 @@ with no builder layer and no macros:
 | `cacp-proto` | ACP v1 wire types, method names, the protocol error | `serde`, `serde_json` |
 | `cacp` | the JSON-RPC connection and both roles | the above, plus `tokio` |
 | `cacp-events` | the client as a channel instead of a trait | `cacp` with `client` |
-| `cacp-agents` | the registry catalog, an installer, and a spawn | the above, plus `ureq` |
+| `cacp-agents` | the registry catalog and an installer for it | `serde`, `serde_json`, `anyhow`, `ureq` |
 
 Depend on `cacp-proto` alone if all you do is read and write ACP JSON — it is
 data only, and pulls in no async runtime.
@@ -187,9 +187,9 @@ permission, exactly as its capabilities should say. It is a layer over the
 ## Finding an agent to drive
 
 The protocol publishes a catalog of ACP agents pinned to exact versions.
-[`cacp-agents`](crates/agents) reads it, installs from it, and hands back
-something you can spawn — so an agent's build never changes underfoot the way
-`npx <pkg>@latest` does, and no package manager sits in the chat path.
+[`cacp-agents`](crates/agents) reads it and installs from it, so an agent's
+build never changes underfoot the way `npx <pkg>@latest` does, and no package
+manager sits in the chat path.
 
 ```rust,ignore
 let catalog = registry::catalog(&cache_dir).expect("a catalog");
@@ -200,12 +200,15 @@ let installed = match Installed::find(&data_dir, &agent.id) {
     None => agent.install(&data_dir, |line| println!("{line}"))?,
 };
 
-let (conn, _child) = Launch::from(&installed).spawn(client)?;
+let mut command = Command::new(&installed.command);
+command.args(&installed.args).current_dir(&cwd);
+let (conn, _child) = cacp::spawn(&mut command, client)?;
 ```
 
-It covers the agent as a program — catalog, install, spawn — and stops there.
-What happens over the connection is `cacp`'s half. Reading the catalog and
-running `npm` block, so call them off a worker rather than inside a turn.
+It carries no runtime and does not depend on `cacp` — the working directory,
+the environment and stderr are the caller's, and `cacp::spawn` takes it from
+there. Reading the catalog and running `npm` block, so call them off a worker
+rather than inside a turn.
 
 ## Coverage
 

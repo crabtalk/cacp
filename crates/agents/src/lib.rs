@@ -1,4 +1,5 @@
-//! An ACP agent as a program on this machine: find it, install it, run it.
+//! An ACP agent as a program on this machine: find it in the catalog, and put
+//! it on disk.
 //!
 //! The registry is the protocol's own catalog, pinned to exact versions — so an
 //! agent's build never changes underfoot the way `npx <pkg>@latest` does.
@@ -16,22 +17,21 @@
 //!     None => agent.install(data_dir, |line| println!("{line}"))?,
 //! };
 //!
-//! let launch = cacp_agents::Launch::from(&installed);
-//! # let _ = launch;
+//! println!("{} {}", installed.command, installed.args.join(" "));
 //! # Ok(()) }
 //! ```
 //!
-//! [`registry`] and [`install`](Agent::install) block: they reach the network
-//! and run `npm`. Call them off an async runtime's worker — everything here is
-//! a one-shot user action, not part of a turn.
+//! Hand that command to [`cacp::spawn`] with whatever working directory and
+//! stderr the caller wants. Everything here blocks — it reaches the network and
+//! runs `npm` — so call it off a worker rather than inside a turn.
+//!
+//! [`cacp::spawn`]: https://docs.rs/cacp
 
 pub use install::{Installed, package_name};
-pub use launch::Launch;
 pub use registry::{Agent, Distribution, Registry};
 
 pub mod mcp;
 pub mod registry;
 
 mod install;
-mod launch;
 mod utils;
