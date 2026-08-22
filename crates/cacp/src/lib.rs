@@ -13,7 +13,7 @@
 //! do not implement:
 //!
 //! ```toml
-//! cacp = { version = "0.1", default-features = false, features = ["client"] }
+//! cacp = { version = "0.0.1", default-features = false, features = ["client"] }
 //! ```
 //!
 //! Depend on `cacp-proto` instead if you only need the wire types; it pulls

@@ -42,14 +42,14 @@ Depend on `cacp-proto` alone if all you do is read and write ACP JSON — it is
 data only, and pulls in no async runtime.
 
 ```toml
-cacp = "0.1"
+cacp = "0.0.1"
 ```
 
 Each role is a feature and both are on by default. Turn off the one you do not
 implement:
 
 ```toml
-cacp = { version = "0.1", default-features = false, features = ["client"] }
+cacp = { version = "0.0.1", default-features = false, features = ["client"] }
 ```
 
 | feature | gives you | adds |
