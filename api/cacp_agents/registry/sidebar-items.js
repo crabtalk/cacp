@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["REGISTRY_URL"],"enum":["Distribution"],"fn":["cached","catalog","fetch","parse"],"struct":["Agent","Registry"]};
