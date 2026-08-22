@@ -112,4 +112,17 @@ impl ClientConn {
     ) -> proto::Result<proto::DisconnectMcpResponse> {
         self.0.request(method::MCP_DISCONNECT, request).await
     }
+
+    /// Call a method the spec does not define. Names must start with `_`.
+    pub async fn ext_request(
+        &self,
+        method: &str,
+        params: serde_json::Value,
+    ) -> proto::Result<serde_json::Value> {
+        self.0.request(method, params).await
+    }
+
+    pub fn ext_notification(&self, method: &str, params: serde_json::Value) -> proto::Result<()> {
+        self.0.notify(method, params)
+    }
 }

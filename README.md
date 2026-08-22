@@ -22,6 +22,12 @@ with no builder layer and no macros:
 - **A slow handler does not stall the stream.** Requests are spawned, so
   blocking on a permission prompt while the user makes up their mind does not
   hold up the updates queued behind it.
+- **A newer peer does not break you.** Update kinds, content blocks, tool call
+  content, plan payloads and enum values this revision does not know arrive in
+  an `Other` variant and round-trip whole, rather than failing the message they
+  came in.
+- **Dropping a call cancels it.** Walk away from a request future and the peer
+  gets `$/cancel_request` instead of finishing work nobody is waiting for.
 
 ## Crates
 
@@ -29,19 +35,21 @@ with no builder layer and no macros:
 | --- | --- | --- |
 | `cacp-proto` | ACP v1 wire types, method names, the protocol error | `serde`, `serde_json` |
 | `cacp` | the JSON-RPC connection and both roles | the above, plus `tokio` |
+| `cacp-events` | the client as a channel instead of a trait | `cacp` with `client` |
+| `cacp-agents` | the registry catalog and an installer for it | `serde`, `serde_json`, `anyhow`, `ureq` |
 
 Depend on `cacp-proto` alone if all you do is read and write ACP JSON — it is
 data only, and pulls in no async runtime.
 
 ```toml
-cacp = "0.1"
+cacp = "0.0.1"
 ```
 
 Each role is a feature and both are on by default. Turn off the one you do not
 implement:
 
 ```toml
-cacp = { version = "0.1", default-features = false, features = ["client"] }
+cacp = { version = "0.0.1", default-features = false, features = ["client"] }
 ```
 
 | feature | gives you | adds |
@@ -68,6 +76,7 @@ impl Agent for Echo {
             agent_capabilities: Default::default(),
             auth_methods: Vec::new(),
             agent_info: None,
+            meta: None,
         })
     }
 
@@ -76,6 +85,7 @@ impl Agent for Echo {
             session_id: "session-1".into(),
             modes: None,
             config_options: None,
+            meta: None,
         })
     }
 
@@ -150,15 +160,72 @@ async fn main() -> Result<()> {
 Both of these are in [`crates/cacp/examples`](crates/cacp/examples), so they are
 compiled on every build rather than left to rot.
 
+## Driving an agent from an event loop
+
+A frontend has a loop already, so [`cacp-events`](crates/events) hands it one
+rather than a trait to implement — every call from the agent arrives as an
+`Event` on a channel.
+
+```rust,ignore
+let (client, mut events) = cacp_events::channel();
+let (agent, _child) = cacp::spawn(&mut Command::new("my-agent"), client)?;
+
+while let Some(event) = events.recv().await {
+    match event {
+        Event::Update(notification) => draw(notification.update),
+        Event::Permission(request, reply) => reply.send(ask_the_user(request).await),
+        _ => {}
+    }
+}
+```
+
+A request you do not match on is declined with `method not found`, the same as
+one you never implemented — so `_ => {}` above serves nothing but updates and
+permission, exactly as its capabilities should say. It is a layer over the
+`Client` trait with no privileged access, which is why it is a separate crate.
+
+## Finding an agent to drive
+
+The protocol publishes a catalog of ACP agents pinned to exact versions.
+[`cacp-agents`](crates/agents) reads it and installs from it, so an agent's
+build never changes underfoot the way `npx <pkg>@latest` does, and no package
+manager sits in the chat path.
+
+```rust,ignore
+let catalog = registry::catalog(&cache_dir).expect("a catalog");
+let agent = catalog.agents.iter().find(|a| a.id == "claude-acp").unwrap();
+
+let installed = match Installed::find(&data_dir, &agent.id) {
+    Some(installed) => installed,
+    None => agent.install(&data_dir, |line| println!("{line}"))?,
+};
+
+let mut command = Command::new(&installed.command);
+command.args(&installed.args).current_dir(&cwd);
+let (conn, _child) = cacp::spawn(&mut command, client)?;
+```
+
+It carries no runtime and does not depend on `cacp` — the working directory,
+the environment and stderr are the caller's, and `cacp::spawn` takes it from
+there. Reading the catalog and running `npm` block, so call them off a worker
+rather than inside a turn.
+
 ## Coverage
 
-Every v1 method name, on both sides. Beyond the stable core, all nine areas the
+Every v1 method name, on both sides. Beyond the stable core, all eight areas the
 spec still marks unstable are implemented: session fork, LLM providers, plan
 operations, next edit suggestions, end-of-turn token usage, tool call names,
-auth methods, elicitation, and MCP over ACP.
+auth methods, and MCP over ACP.
 
-Not there yet: `_meta` and the `_`-prefixed extension methods. cacp round-trips
-drop `_meta`, and there is no hook for serving an extension method.
+Both extension mechanisms work: `_meta` is a field on every message that carries
+it in the spec, read and written untouched, and `_`-prefixed methods reach
+`ext_request` / `ext_notification` on either role — which decline by default,
+like every other optional method.
+
+Not there yet: the leniency upstream applies field by field, where a malformed
+optional field falls back to its default and a bad array item is skipped rather
+than failing the message around it. Unknown *shapes* are handled — that is what
+the `Other` variants are for — but malformed ones are still an error.
 
 ## License
 

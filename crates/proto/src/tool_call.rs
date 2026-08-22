@@ -1,8 +1,8 @@
 //! Tool calls and the incremental updates an agent reports for them.
 
-use crate::{ContentBlock, TerminalId, ToolCallId};
+use crate::{ContentBlock, Meta, TerminalId, ToolCallId};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
 /// A tool invocation the agent is reporting to the client.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -25,6 +25,8 @@ pub struct ToolCall {
     pub raw_input: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub raw_output: Option<serde_json::Value>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 impl ToolCall {
@@ -39,6 +41,7 @@ impl ToolCall {
             locations: Vec::new(),
             raw_input: None,
             raw_output: None,
+            meta: None,
         }
     }
 }
@@ -50,6 +53,8 @@ pub struct ToolCallUpdate {
     pub tool_call_id: ToolCallId,
     #[serde(flatten)]
     pub fields: ToolCallUpdateFields,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -127,6 +132,7 @@ impl From<ToolCall> for ToolCallUpdate {
                 raw_input: call.raw_input,
                 raw_output: call.raw_output,
             },
+            meta: None,
         }
     }
 }
@@ -158,7 +164,7 @@ impl ToolKind {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ToolCallStatus {
     #[default]
@@ -166,6 +172,8 @@ pub enum ToolCallStatus {
     InProgress,
     Completed,
     Failed,
+    #[serde(untagged)]
+    Other(String),
 }
 
 impl ToolCallStatus {
@@ -186,6 +194,16 @@ pub enum ToolCallContent {
     Terminal {
         terminal_id: TerminalId,
     },
+    #[serde(untagged)]
+    Other(OtherToolCallContent),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OtherToolCallContent {
+    #[serde(rename = "type")]
+    pub kind: String,
+    #[serde(flatten)]
+    pub fields: BTreeMap<String, serde_json::Value>,
 }
 
 impl<T: Into<ContentBlock>> From<T> for ToolCallContent {
@@ -205,13 +223,17 @@ pub struct Diff {
     /// Absent for a newly created file.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub old_text: Option<String>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }
 
 /// A file the tool call touches, so the client can follow along.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolCallLocation {
     pub path: PathBuf,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub line: Option<u32>,
+    #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
+    pub meta: Option<Meta>,
 }

@@ -5,12 +5,13 @@
 
 pub use content::*;
 pub use elicitation::*;
-pub use error::{Error, Result};
+pub use error::*;
 pub use fs::*;
 pub use id::*;
 pub use initialize::*;
 pub use maybe::MaybeUndefined;
 pub use mcp::*;
+pub use meta::Meta;
 pub use nes::*;
 pub use permission::*;
 pub use plan::*;
@@ -31,6 +32,7 @@ mod id;
 mod initialize;
 mod maybe;
 mod mcp;
+mod meta;
 mod nes;
 mod permission;
 mod plan;

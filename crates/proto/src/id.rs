@@ -68,13 +68,15 @@ id! {
     NesSuggestionId,
 }
 
-/// A JSON-RPC request id. Either shape is legal; peers echo back whatever
-/// they were sent.
+/// A JSON-RPC request id. Any shape is legal; peers echo back whatever they
+/// were sent. [`Null`](RequestId::Null) is the id of an error about a frame
+/// too malformed to have one.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RequestId {
     Num(i64),
     Str(String),
+    Null,
 }
 
 impl fmt::Display for RequestId {
@@ -82,6 +84,7 @@ impl fmt::Display for RequestId {
         match self {
             Self::Num(n) => write!(f, "{n}"),
             Self::Str(s) => f.write_str(s),
+            Self::Null => f.write_str("null"),
         }
     }
 }
