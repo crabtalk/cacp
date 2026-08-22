@@ -3,7 +3,6 @@ name: book
 on:
   push:
     branches: [main]
-  pull_request:
 
 permissions:
   contents: read
@@ -33,13 +32,11 @@ jobs:
       - run: mdbook build book
 
       - uses: actions/upload-pages-artifact@v3
-        if: github.ref == 'refs/heads/main'
         with:
           path: book/book
 
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       pages: write
