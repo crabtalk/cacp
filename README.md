@@ -31,8 +31,8 @@ with no builder layer and no macros:
 
 ## Documentation
 
-The [book](book/src/introduction.md) covers both roles, the event-loop client
-and the agent registry. The API is on [docs.rs](https://docs.rs/cacp).
+The [book](https://crabtalk.github.io/cacp/) covers both roles, the event-loop
+client and the agent registry. The API is on [docs.rs](https://docs.rs/cacp).
 
 Build it locally with `mdbook serve book`.
 
