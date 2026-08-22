@@ -38,14 +38,45 @@ pub struct Agent {
 pub enum Distribution {
     /// An npm package run over stdio.
     Npm { package: String, args: Vec<String> },
-    /// Platform archives or other package managers.
+    /// A release archive for *this* machine, already narrowed from the registry's
+    /// per-platform table — a build for someone else's platform is no more
+    /// installable here than a kind we can't read at all.
+    Binary(Binary),
+    /// Other package managers, or a binary with no build for this platform.
     Unsupported { kind: String },
+}
+
+/// One platform's release archive, and what to run once it is unpacked.
+#[derive(Debug, Clone)]
+pub struct Binary {
+    pub archive: String,
+    /// The executable, relative to the root the archive unpacks into.
+    pub cmd: String,
+    /// Absent for roughly half the catalog, which is the publisher's choice and
+    /// not a signal about the download — see `install`.
+    pub sha256: Option<String>,
+    pub args: Vec<String>,
+    pub env: BTreeMap<String, String>,
 }
 
 impl Agent {
     pub fn installable(&self) -> bool {
-        matches!(self.distribution, Distribution::Npm { .. })
+        matches!(
+            self.distribution,
+            Distribution::Npm { .. } | Distribution::Binary(_)
+        )
     }
+}
+
+/// How the registry names this machine — `darwin-aarch64`, `linux-x86_64`. Rust
+/// calls Apple's platform `macos` and the registry calls it `darwin`; the
+/// architectures already agree.
+fn platform_key() -> String {
+    let os = match std::env::consts::OS {
+        "macos" => "darwin",
+        other => other,
+    };
+    format!("{os}-{}", std::env::consts::ARCH)
 }
 
 #[derive(Deserialize)]
@@ -76,6 +107,64 @@ struct WireNpx {
     args: Vec<String>,
 }
 
+/// One entry of the `binary` table, keyed by [`platform_key`].
+#[derive(Deserialize)]
+struct WireBinary {
+    archive: String,
+    cmd: String,
+    #[serde(default)]
+    sha256: Option<String>,
+    #[serde(default)]
+    args: Vec<String>,
+    #[serde(default)]
+    env: BTreeMap<String, String>,
+}
+
+/// Pick the way in. npm first wherever both are offered: it is the smaller
+/// download and the one path that needs no per-platform build.
+fn read_distribution(table: &BTreeMap<String, serde_json::Value>) -> Distribution {
+    // `npx` is the wire name; we install the package rather than resolving it
+    // per launch, hence `Npm` on our side.
+    if let Some(value) = table.get("npx") {
+        return match serde_json::from_value::<WireNpx>(value.clone()) {
+            Ok(npx) => Distribution::Npm {
+                package: npx.package,
+                args: npx.args,
+            },
+            Err(_) => Distribution::Unsupported {
+                kind: "npx".to_owned(),
+            },
+        };
+    }
+    if let Some(value) = table.get("binary") {
+        let builds: BTreeMap<String, WireBinary> =
+            serde_json::from_value(value.clone()).unwrap_or_default();
+        if let Some(build) = builds
+            .into_iter()
+            .find_map(|(plat, b)| (plat == platform_key()).then_some(b))
+        {
+            return Distribution::Binary(Binary {
+                archive: build.archive,
+                cmd: build.cmd,
+                sha256: build.sha256,
+                args: build.args,
+                env: build.env,
+            });
+        }
+        // Published, but not for this machine.
+        return Distribution::Unsupported {
+            kind: "binary".to_owned(),
+        };
+    }
+    Distribution::Unsupported {
+        kind: table
+            .keys()
+            .next()
+            .cloned()
+            .unwrap_or_else(|| "unknown".to_owned()),
+    }
+}
+
 /// Read a catalog document, for a caller that fetched it itself.
 pub fn parse(body: &str) -> Result<Registry> {
     let wire: WireRegistry = serde_json::from_str(body).context("malformed registry json")?;
@@ -83,27 +172,7 @@ pub fn parse(body: &str) -> Result<Registry> {
         .agents
         .into_iter()
         .map(|agent| {
-            // `npx` is the wire name; we install the package rather than
-            // resolving it per launch, hence `Npm` on our side.
-            let distribution = match agent.distribution.get("npx") {
-                Some(value) => match serde_json::from_value::<WireNpx>(value.clone()) {
-                    Ok(npx) => Distribution::Npm {
-                        package: npx.package,
-                        args: npx.args,
-                    },
-                    Err(_) => Distribution::Unsupported {
-                        kind: "npx".to_owned(),
-                    },
-                },
-                None => Distribution::Unsupported {
-                    kind: agent
-                        .distribution
-                        .keys()
-                        .next()
-                        .cloned()
-                        .unwrap_or_else(|| "unknown".to_owned()),
-                },
-            };
+            let distribution = read_distribution(&agent.distribution);
             Agent {
                 id: agent.id,
                 name: agent.name,
