@@ -1,0 +1,13 @@
+[book]
+title = "cacp"
+description = "A compact implementation of the Agent Client Protocol"
+authors = ["clearloop"]
+language = "en"
+src = "src"
+
+[rust]
+edition = "2024"
+
+[output.html]
+git-repository-url = "https://github.com/crabtalk/cacp"
+edit-url-template = "https://github.com/crabtalk/cacp/edit/main/book/{path}"
