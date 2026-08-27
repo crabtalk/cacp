@@ -5,7 +5,7 @@ to implement. Every call from the agent arrives as an `Event` on a channel.
 
 ```rust,ignore
 let (client, mut events) = cacp_events::channel();
-let (agent, _child) = cacp::spawn(&mut Command::new("my-agent"), client)?;
+let (agent, _child) = cacp::spawn(&mut Command::new("my-agent"), client, None)?;
 
 while let Some(event) = events.recv().await {
     match event {

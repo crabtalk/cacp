@@ -21,7 +21,7 @@
 //!
 //! [acp]: https://agentclientprotocol.com
 
-pub use codec::Message;
+pub use codec::{Direction, Message, Tap};
 pub use handler::Handler;
 pub use peer::Peer;
 pub use proto::{self as schema, Error, RequestId, Result, method};

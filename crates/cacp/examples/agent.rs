@@ -33,7 +33,7 @@ impl Agent for Echo {
 
 #[tokio::main]
 async fn main() {
-    let _client = cacp::serve_on_stdio(Arc::new(Echo));
+    let _client = cacp::serve_on_stdio(Arc::new(Echo), None);
     // The read and write loops run on the runtime; keep the process alive.
     std::future::pending::<()>().await
 }

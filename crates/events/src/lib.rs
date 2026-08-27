@@ -19,7 +19,7 @@
 //!
 //! # async fn run() -> cacp::Result<()> {
 //! let (client, mut events) = cacp_events::channel();
-//! let (_agent, _child) = cacp::spawn(&mut tokio::process::Command::new("my-agent"), client)?;
+//! let (_agent, _child) = cacp::spawn(&mut tokio::process::Command::new("my-agent"), client, None)?;
 //!
 //! while let Some(event) = events.recv().await {
 //!     match event {

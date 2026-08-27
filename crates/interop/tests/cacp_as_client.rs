@@ -363,7 +363,7 @@ async fn every_method() {
 
     tokio::spawn(async move { agent.connect_to(byte_streams(theirs)).await });
 
-    let agent = cacp::connect(ours, Arc::new(Ui(served.clone())));
+    let agent = cacp::connect(ours, Arc::new(Ui(served.clone())), None);
 
     agent
         .initialize(schema::InitializeRequest::new(Default::default()))
@@ -520,7 +520,7 @@ async fn dropped_call() {
     tokio::spawn(async move { agent.connect_to(byte_streams(theirs)).await });
 
     let served = Served::default();
-    let agent = cacp::connect(ours, Arc::new(Ui(served)));
+    let agent = cacp::connect(ours, Arc::new(Ui(served)), None);
     agent
         .initialize(schema::InitializeRequest::new(Default::default()))
         .await

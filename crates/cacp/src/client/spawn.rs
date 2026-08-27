@@ -3,6 +3,7 @@
 use crate::{
     Peer,
     client::{AgentConn, Client, serve::Serve},
+    codec::Tap,
 };
 use std::sync::Arc;
 use tokio::{
@@ -18,6 +19,7 @@ use tokio::{
 pub fn spawn<C: Client>(
     command: &mut Command,
     client: Arc<C>,
+    tap: Option<Tap>,
 ) -> proto::Result<(AgentConn, Child)> {
     // Without this the agent outlives its `Child`: dropping the handle does not
     // signal it, and its stdin belongs to the write loop rather than to us.
@@ -36,6 +38,6 @@ pub fn spawn<C: Client>(
         .take()
         .ok_or_else(|| proto::Error::internal_error().data("agent stdout was not piped"))?;
 
-    let peer = Peer::new(BufReader::new(stdout), stdin, Arc::new(Serve(client)));
+    let peer = Peer::new(BufReader::new(stdout), stdin, Arc::new(Serve(client)), tap);
     Ok((AgentConn(peer), child))
 }

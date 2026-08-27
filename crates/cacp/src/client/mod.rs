@@ -11,7 +11,7 @@
 //! A frontend with an event loop of its own can take `cacp-events` instead,
 //! which serves this trait over a channel.
 
-use crate::Peer;
+use crate::{Peer, codec::Tap};
 use serve::Serve;
 use std::sync::Arc;
 use tokio::io::{AsyncBufRead, AsyncRead, AsyncWrite};
@@ -27,20 +27,20 @@ mod spawn;
 
 /// Connect `client` to an agent over a duplex stream. Use [`spawn`] instead
 /// when the agent is a subprocess.
-pub fn connect<S, C>(stream: S, client: Arc<C>) -> AgentConn
+pub fn connect<S, C>(stream: S, client: Arc<C>, tap: Option<Tap>) -> AgentConn
 where
     S: AsyncRead + AsyncWrite + Send + 'static,
     C: Client,
 {
-    AgentConn(Peer::duplex(stream, Arc::new(Serve(client))))
+    AgentConn(Peer::duplex(stream, Arc::new(Serve(client)), tap))
 }
 
 /// Connect `client` to an agent over a reader and a writer owned separately.
-pub fn connect_on<R, W, C>(reader: R, writer: W, client: Arc<C>) -> AgentConn
+pub fn connect_on<R, W, C>(reader: R, writer: W, client: Arc<C>, tap: Option<Tap>) -> AgentConn
 where
     R: AsyncBufRead + Unpin + Send + 'static,
     W: AsyncWrite + Unpin + Send + 'static,
     C: Client,
 {
-    AgentConn(Peer::new(reader, writer, Arc::new(Serve(client))))
+    AgentConn(Peer::new(reader, writer, Arc::new(Serve(client)), tap))
 }

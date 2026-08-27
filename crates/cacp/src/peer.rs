@@ -1,7 +1,7 @@
 //! The bidirectional JSON-RPC connection both roles are built on.
 
 use crate::{
-    codec::{self, Message},
+    codec::{self, Message, Tap},
     handler::Handler,
 };
 use serde::{Serialize, de::DeserializeOwned};
@@ -34,8 +34,9 @@ struct Inner {
 
 impl Peer {
     /// Wire a reader and a writer to `handler`, spawning the read and write
-    /// loops. The returned [`Peer`] calls the other side.
-    pub fn new<R, W, H>(reader: R, writer: W, handler: Arc<H>) -> Self
+    /// loops. The returned [`Peer`] calls the other side. `tap` sees every
+    /// line either loop moves.
+    pub fn new<R, W, H>(reader: R, writer: W, handler: Arc<H>, tap: Option<Tap>) -> Self
     where
         R: AsyncBufRead + Unpin + Send + 'static,
         W: AsyncWrite + Unpin + Send + 'static,
@@ -47,19 +48,19 @@ impl Peer {
             pending: Pending::default(),
             next_id: AtomicI64::new(0),
         }));
-        tokio::spawn(write_loop(writer, rx));
-        tokio::spawn(read_loop(reader, handler, peer.clone()));
+        tokio::spawn(write_loop(writer, rx, tap.clone()));
+        tokio::spawn(read_loop(reader, handler, peer.clone(), tap));
         peer
     }
 
     /// Wire up a duplex stream — a subprocess's stdio, a socket, an in-memory pipe.
-    pub fn duplex<S, H>(stream: S, handler: Arc<H>) -> Self
+    pub fn duplex<S, H>(stream: S, handler: Arc<H>, tap: Option<Tap>) -> Self
     where
         S: tokio::io::AsyncRead + AsyncWrite + Send + 'static,
         H: Handler,
     {
         let (reader, writer) = tokio::io::split(stream);
-        Self::new(BufReader::new(reader), writer, handler)
+        Self::new(BufReader::new(reader), writer, handler, tap)
     }
 
     /// Call the other side and wait for its answer.
@@ -179,22 +180,26 @@ fn disconnected() -> proto::Error {
 async fn write_loop<W: AsyncWrite + Unpin>(
     mut writer: W,
     mut rx: mpsc::UnboundedReceiver<Message>,
+    tap: Option<Tap>,
 ) {
     while let Some(message) = rx.recv().await {
-        if codec::write(&mut writer, &message).await.is_err() {
+        if codec::write(&mut writer, &message, tap.as_ref())
+            .await
+            .is_err()
+        {
             break;
         }
     }
 }
 
-async fn read_loop<R, H>(mut reader: R, handler: Arc<H>, peer: Peer)
+async fn read_loop<R, H>(mut reader: R, handler: Arc<H>, peer: Peer, tap: Option<Tap>)
 where
     R: AsyncBufRead + Unpin,
     H: Handler,
 {
     let in_flight = InFlight::default();
     loop {
-        let message = match codec::read(&mut reader).await {
+        let message = match codec::read(&mut reader, tap.as_ref()).await {
             Ok(Some(message)) => message,
             Ok(None) => break,
             // A malformed frame is the peer's bug, not ours; report and continue.

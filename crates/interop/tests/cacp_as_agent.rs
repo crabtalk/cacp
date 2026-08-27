@@ -347,7 +347,7 @@ async fn every_method() {
         client: Mutex::new(None),
         served: agent_side.clone(),
     });
-    let conn = cacp::serve(ours, Arc::clone(&echo));
+    let conn = cacp::serve(ours, Arc::clone(&echo), None);
     *echo.client.lock().expect("poisoned") = Some(conn);
 
     let client = official::Client.builder().name("official-client");
@@ -606,7 +606,7 @@ async fn dropped_call() {
     let (started, mut serving) = mpsc::unbounded_channel();
     let (aborted, mut torn_down) = mpsc::unbounded_channel();
 
-    cacp::serve(ours, Arc::new(Sleeper { started, aborted }));
+    cacp::serve(ours, Arc::new(Sleeper { started, aborted }), None);
 
     official::Client
         .builder()
