@@ -29,6 +29,7 @@ pub struct Agent {
     pub version: String,
     pub description: Option<String>,
     pub repository: Option<String>,
+    pub icon: Option<String>,
     pub distribution: Distribution,
 }
 
@@ -96,6 +97,8 @@ struct WireAgent {
     description: Option<String>,
     #[serde(default)]
     repository: Option<String>,
+    #[serde(default)]
+    icon: Option<String>,
     #[serde(default)]
     distribution: BTreeMap<String, serde_json::Value>,
 }
@@ -179,6 +182,7 @@ pub fn parse(body: &str) -> Result<Registry> {
                 version: agent.version,
                 description: agent.description,
                 repository: agent.repository,
+                icon: agent.icon,
                 distribution,
             }
         })
