@@ -29,6 +29,9 @@ pub struct Agent {
     pub version: String,
     pub description: Option<String>,
     pub repository: Option<String>,
+    /// The project's own page, for an agent that publishes no repository — a
+    /// proprietary one has somewhere to point even with no source to show.
+    pub website: Option<String>,
     pub icon: Option<String>,
     pub distribution: Distribution,
 }
@@ -97,6 +100,8 @@ struct WireAgent {
     description: Option<String>,
     #[serde(default)]
     repository: Option<String>,
+    #[serde(default)]
+    website: Option<String>,
     #[serde(default)]
     icon: Option<String>,
     #[serde(default)]
@@ -182,6 +187,7 @@ pub fn parse(body: &str) -> Result<Registry> {
                 version: agent.version,
                 description: agent.description,
                 repository: agent.repository,
+                website: agent.website,
                 icon: agent.icon,
                 distribution,
             }
