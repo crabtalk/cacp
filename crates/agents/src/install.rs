@@ -31,7 +31,7 @@ impl Agent {
     /// Install under `data_dir`, streaming installer output to `on_line`.
     /// Replaces any previous install of the same agent.
     pub fn install(&self, data_dir: &Path, on_line: impl FnMut(&str)) -> Result<Installed> {
-        let dir = agent_dir(data_dir, &self.id);
+        let dir = agent_dir(data_dir, &self.id)?;
         let (command, args, env) = match &self.distribution {
             Distribution::Npm { package, args } => (
                 install_npm(&dir, package, on_line)?,
@@ -54,7 +54,7 @@ impl Agent {
             env,
         };
         std::fs::write(
-            record_file(data_dir, &self.id),
+            record_file(data_dir, &self.id)?,
             serde_json::to_string_pretty(&record)?,
         )
         .context("recording the installation")?;
@@ -66,14 +66,14 @@ impl Installed {
     /// The recorded installation for `id`, if the agent is installed and its
     /// command still exists.
     pub fn find(data_dir: &Path, id: &str) -> Option<Self> {
-        let body = std::fs::read_to_string(record_file(data_dir, id)).ok()?;
+        let body = std::fs::read_to_string(record_file(data_dir, id).ok()?).ok()?;
         let record: Self = serde_json::from_str(&body).ok()?;
         Path::new(&record.command).exists().then_some(record)
     }
 
     /// Delete an installed agent. Succeeds whether or not it was there.
     pub fn remove(data_dir: &Path, id: &str) -> Result<()> {
-        let dir = agent_dir(data_dir, id);
+        let dir = agent_dir(data_dir, id)?;
         if dir.exists() {
             std::fs::remove_dir_all(&dir).with_context(|| format!("removing {}", dir.display()))?;
         }
@@ -81,12 +81,12 @@ impl Installed {
     }
 }
 
-fn agent_dir(data_dir: &Path, id: &str) -> PathBuf {
-    data_dir.join("agents").join(id)
+fn agent_dir(data_dir: &Path, id: &str) -> Result<PathBuf> {
+    utils::contained(&data_dir.join("agents"), id)
 }
 
-fn record_file(data_dir: &Path, id: &str) -> PathBuf {
-    agent_dir(data_dir, id).join("install.json")
+fn record_file(data_dir: &Path, id: &str) -> Result<PathBuf> {
+    Ok(agent_dir(data_dir, id)?.join("install.json"))
 }
 
 /// The package name in a spec like `@scope/name@1.2.3` — the version separator
@@ -116,7 +116,15 @@ pub(crate) fn install_npm(
         .arg("install")
         .arg("--prefix")
         .arg(dir)
-        .args(["--no-fund", "--no-audit", "--loglevel", "http"])
+        // A dependency's `postinstall` runs as this user, before the agent is
+        // ever launched — the usual way a compromised package gets execution.
+        .args([
+            "--ignore-scripts",
+            "--no-fund",
+            "--no-audit",
+            "--loglevel",
+            "http",
+        ])
         .arg(package)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -198,7 +206,7 @@ pub(crate) fn install_binary(
     unpack(&archive, dir, &mut on_line)?;
     let _ = std::fs::remove_file(&archive);
 
-    let command = dir.join(binary.cmd.trim_start_matches("./"));
+    let command = utils::contained(dir, &binary.cmd)?;
     if !command.exists() {
         bail!("{} is missing after unpacking", command.display());
     }

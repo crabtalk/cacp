@@ -29,6 +29,7 @@
 
 pub use install::{Installed, package_name};
 pub use registry::{Agent, Distribution, Registry};
+pub use utils::contained;
 
 pub mod mcp;
 pub mod registry;
