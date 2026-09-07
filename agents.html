@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-79dd8024.js";
+            window.path_to_searchindex_js = "searchindex-e4ad682b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-2eaed1e0.js"></script>
@@ -195,7 +195,7 @@ let installed = match Installed::find(&amp;data_dir, &amp;agent.id) {
 
 let mut command = Command::new(&amp;installed.command);
 command.args(&amp;installed.args).current_dir(&amp;cwd);
-let (conn, _child) = cacp::spawn(&amp;mut command, client)?;</code></pre>
+let (conn, _child) = cacp::spawn(&amp;mut command, client, None)?;</code></pre>
 <p>It carries no runtime and does not depend on <code>cacp</code>. The working directory, the
 environment and stderr are yours to set, and <code>cacp::spawn</code> takes it from there.</p>
 <p><code>registry::catalog</code> serves a cache under a day old as-is, tries the network

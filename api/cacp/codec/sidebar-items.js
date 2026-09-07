@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["read","write"],"struct":["Message","Version"]};
+window.SIDEBAR_ITEMS = {"enum":["Direction"],"fn":["read","write"],"struct":["Message","Version"],"type":["Tap"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["package_name"],"mod":["mcp","registry"],"struct":["Installed"]};
+window.SIDEBAR_ITEMS = {"fn":["contained","package_name"],"mod":["mcp","registry"],"struct":["Installed"]};

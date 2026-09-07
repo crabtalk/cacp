@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-79dd8024.js";
+            window.path_to_searchindex_js = "searchindex-e4ad682b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-2eaed1e0.js"></script>
@@ -219,11 +219,11 @@ a working peer — it just advertises less.</p>
 </div>
 <p>Depend on <code>cacp-proto</code> alone if all you do is read and write ACP JSON — it is
 data only, and pulls in no async runtime.</p>
-<pre><code class="language-toml">cacp = "0.0.1"
+<pre><code class="language-toml">cacp = "0.1.0"
 </code></pre>
 <p>Each role is a feature and both are on by default. Turn off the one you do not
 implement:</p>
-<pre><code class="language-toml">cacp = { version = "0.0.1", default-features = false, features = ["client"] }
+<pre><code class="language-toml">cacp = { version = "0.1.0", default-features = false, features = ["client"] }
 </code></pre>
 <div class="table-wrapper">
 <table>
@@ -279,7 +279,7 @@ impl Agent for Echo {
 
 #[tokio::main]
 async fn main() {
-    let _client = cacp::serve_on_stdio(Arc::new(Echo));
+    let _client = cacp::serve_on_stdio(Arc::new(Echo), None);
     // The read and write loops run on the runtime; keep the process alive.
     std::future::pending::&lt;()&gt;().await
 }</code></pre>
@@ -330,7 +330,7 @@ impl Client for Ui {
 
 #[tokio::main]
 async fn main() -&gt; Result&lt;()&gt; {
-    let (agent, _child) = cacp::spawn(Command::new("my-agent").arg("--acp"), Arc::new(Ui))?;
+    let (agent, _child) = cacp::spawn(Command::new("my-agent").arg("--acp"), Arc::new(Ui), None)?;
 
     agent
         .initialize(schema::InitializeRequest::new(Default::default()))
@@ -368,7 +368,7 @@ dropping it.</li>
 <p>A frontend has a loop already, so <code>cacp-events</code> hands it one rather than a trait
 to implement. Every call from the agent arrives as an <code>Event</code> on a channel.</p>
 <pre><code class="language-rust ignore">let (client, mut events) = cacp_events::channel();
-let (agent, _child) = cacp::spawn(&amp;mut Command::new("my-agent"), client)?;
+let (agent, _child) = cacp::spawn(&amp;mut Command::new("my-agent"), client, None)?;
 
 while let Some(event) = events.recv().await {
     match event {
@@ -411,7 +411,7 @@ let installed = match Installed::find(&amp;data_dir, &amp;agent.id) {
 
 let mut command = Command::new(&amp;installed.command);
 command.args(&amp;installed.args).current_dir(&amp;cwd);
-let (conn, _child) = cacp::spawn(&amp;mut command, client)?;</code></pre>
+let (conn, _child) = cacp::spawn(&amp;mut command, client, None)?;</code></pre>
 <p>It carries no runtime and does not depend on <code>cacp</code>. The working directory, the
 environment and stderr are yours to set, and <code>cacp::spawn</code> takes it from there.</p>
 <p><code>registry::catalog</code> serves a cache under a day old as-is, tries the network

@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-79dd8024.js";
+            window.path_to_searchindex_js = "searchindex-e4ad682b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-2eaed1e0.js"></script>
@@ -184,7 +184,7 @@
 <p>A frontend has a loop already, so <code>cacp-events</code> hands it one rather than a trait
 to implement. Every call from the agent arrives as an <code>Event</code> on a channel.</p>
 <pre><code class="language-rust ignore">let (client, mut events) = cacp_events::channel();
-let (agent, _child) = cacp::spawn(&amp;mut Command::new("my-agent"), client)?;
+let (agent, _child) = cacp::spawn(&amp;mut Command::new("my-agent"), client, None)?;
 
 while let Some(event) = events.recv().await {
     match event {
