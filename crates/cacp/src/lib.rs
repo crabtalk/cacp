@@ -13,7 +13,7 @@
 //! do not implement:
 //!
 //! ```toml
-//! cacp = { version = "0.0.1", default-features = false, features = ["client"] }
+//! cacp = { version = "0.1.0", default-features = false, features = ["client"] }
 //! ```
 //!
 //! Depend on `cacp-proto` instead if you only need the wire types; it pulls
@@ -21,7 +21,7 @@
 //!
 //! [acp]: https://agentclientprotocol.com
 
-pub use codec::Message;
+pub use codec::{Direction, Message, Tap};
 pub use handler::Handler;
 pub use peer::Peer;
 pub use proto::{self as schema, Error, RequestId, Result, method};

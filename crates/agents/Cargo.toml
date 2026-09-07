@@ -6,9 +6,15 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/cacp-agents"
+readme = "../../README.md"
+keywords = ["acp", "agent", "registry", "install", "ai"]
+categories = ["api-bindings", "development-tools"]
 
 [dependencies]
 anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 ureq.workspace = true

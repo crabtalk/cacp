@@ -1,7 +1,18 @@
 //! The JSON-RPC 2.0 envelope and its newline-delimited framing.
 
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncWrite, AsyncWriteExt};
+
+/// Which way a line crossed the wire.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    Incoming,
+    Outgoing,
+}
+
+/// A tap on the raw JSON-RPC lines, for logging what crossed the wire.
+pub type Tap = Arc<dyn Fn(Direction, &str) + Send + Sync>;
 
 /// One frame off the wire.
 ///
@@ -100,6 +111,7 @@ impl<'de> Deserialize<'de> for Version {
 /// Read one frame. `Ok(None)` means the peer closed the connection.
 pub async fn read<R: AsyncBufRead + Unpin>(
     reader: &mut R,
+    tap: Option<&Tap>,
 ) -> Result<Option<Message>, proto::Error> {
     let mut line = String::new();
     loop {
@@ -109,6 +121,9 @@ pub async fn read<R: AsyncBufRead + Unpin>(
         }
         // Agents launched through a shell wrapper sometimes emit blank lines.
         if !line.trim().is_empty() {
+            if let Some(tap) = tap {
+                tap(Direction::Incoming, line.trim_end());
+            }
             return Ok(Some(serde_json::from_str(&line)?));
         }
     }
@@ -117,10 +132,14 @@ pub async fn read<R: AsyncBufRead + Unpin>(
 pub async fn write<W: AsyncWrite + Unpin>(
     writer: &mut W,
     message: &Message,
+    tap: Option<&Tap>,
 ) -> Result<(), proto::Error> {
-    let mut buf = serde_json::to_vec(message)?;
-    buf.push(b'\n');
-    writer.write_all(&buf).await?;
+    let mut line = serde_json::to_string(message)?;
+    if let Some(tap) = tap {
+        tap(Direction::Outgoing, &line);
+    }
+    line.push('\n');
+    writer.write_all(line.as_bytes()).await?;
     writer.flush().await?;
     Ok(())
 }

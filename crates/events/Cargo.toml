@@ -6,6 +6,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/cacp-events"
+readme = "../../README.md"
+keywords = ["acp", "agent", "protocol", "client", "async"]
+categories = ["api-bindings", "asynchronous"]
 
 [dependencies]
 cacp = { workspace = true, features = ["client"] }

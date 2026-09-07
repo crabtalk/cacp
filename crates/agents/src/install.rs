@@ -1,18 +1,21 @@
 //! Putting an agent on disk and finding what it left there.
 
 use crate::{
-    registry::{Agent, Distribution},
+    registry::{Agent, Binary, Distribution},
     utils,
 };
 use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{
-    io::{BufRead, BufReader},
+    collections::BTreeMap,
+    io::{BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
-/// A local installation: the command to spawn and its arguments.
+/// A local installation: the command to spawn, its arguments, and anything the
+/// agent needs in its environment to speak ACP at all.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Installed {
     pub id: String,
@@ -20,25 +23,38 @@ pub struct Installed {
     pub command: String,
     #[serde(default)]
     pub args: Vec<String>,
+    #[serde(default)]
+    pub env: BTreeMap<String, String>,
 }
 
 impl Agent {
     /// Install under `data_dir`, streaming installer output to `on_line`.
     /// Replaces any previous install of the same agent.
     pub fn install(&self, data_dir: &Path, on_line: impl FnMut(&str)) -> Result<Installed> {
-        let Distribution::Npm { package, args } = &self.distribution else {
-            bail!("{} cannot be installed yet", self.name);
+        let dir = agent_dir(data_dir, &self.id)?;
+        let (command, args, env) = match &self.distribution {
+            Distribution::Npm { package, args } => (
+                install_npm(&dir, package, on_line)?,
+                args.clone(),
+                BTreeMap::new(),
+            ),
+            Distribution::Binary(binary) => (
+                install_binary(&dir, binary, on_line)?,
+                binary.args.clone(),
+                binary.env.clone(),
+            ),
+            Distribution::Unsupported { .. } => bail!("{} cannot be installed yet", self.name),
         };
-        let command = install_npm(&agent_dir(data_dir, &self.id), package, on_line)?;
 
         let record = Installed {
             id: self.id.clone(),
             version: self.version.clone(),
             command,
-            args: args.clone(),
+            args,
+            env,
         };
         std::fs::write(
-            record_file(data_dir, &self.id),
+            record_file(data_dir, &self.id)?,
             serde_json::to_string_pretty(&record)?,
         )
         .context("recording the installation")?;
@@ -50,14 +66,14 @@ impl Installed {
     /// The recorded installation for `id`, if the agent is installed and its
     /// command still exists.
     pub fn find(data_dir: &Path, id: &str) -> Option<Self> {
-        let body = std::fs::read_to_string(record_file(data_dir, id)).ok()?;
+        let body = std::fs::read_to_string(record_file(data_dir, id).ok()?).ok()?;
         let record: Self = serde_json::from_str(&body).ok()?;
         Path::new(&record.command).exists().then_some(record)
     }
 
     /// Delete an installed agent. Succeeds whether or not it was there.
     pub fn remove(data_dir: &Path, id: &str) -> Result<()> {
-        let dir = agent_dir(data_dir, id);
+        let dir = agent_dir(data_dir, id)?;
         if dir.exists() {
             std::fs::remove_dir_all(&dir).with_context(|| format!("removing {}", dir.display()))?;
         }
@@ -65,12 +81,12 @@ impl Installed {
     }
 }
 
-fn agent_dir(data_dir: &Path, id: &str) -> PathBuf {
-    data_dir.join("agents").join(id)
+fn agent_dir(data_dir: &Path, id: &str) -> Result<PathBuf> {
+    utils::contained(&data_dir.join("agents"), id)
 }
 
-fn record_file(data_dir: &Path, id: &str) -> PathBuf {
-    agent_dir(data_dir, id).join("install.json")
+fn record_file(data_dir: &Path, id: &str) -> Result<PathBuf> {
+    Ok(agent_dir(data_dir, id)?.join("install.json"))
 }
 
 /// The package name in a spec like `@scope/name@1.2.3` — the version separator
@@ -100,7 +116,15 @@ pub(crate) fn install_npm(
         .arg("install")
         .arg("--prefix")
         .arg(dir)
-        .args(["--no-fund", "--no-audit", "--loglevel", "http"])
+        // A dependency's `postinstall` runs as this user, before the agent is
+        // ever launched — the usual way a compromised package gets execution.
+        .args([
+            "--ignore-scripts",
+            "--no-fund",
+            "--no-audit",
+            "--loglevel",
+            "http",
+        ])
         .arg(package)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -148,6 +172,157 @@ pub(crate) fn install_npm(
     let command = binary_path(dir, package)?;
     on_line("installed");
     Ok(command)
+}
+
+/// Download a release archive into `dir`, unpack it there, and return the
+/// executable named by [`Binary::cmd`].
+///
+/// The archive is fetched with an HTTP client rather than handed to the OS,
+/// which is what keeps macOS from stamping `com.apple.quarantine` on it — the
+/// ad-hoc signature every Rust and Go release carries would not survive
+/// Gatekeeper's assessment, and does not have to face it.
+pub(crate) fn install_binary(
+    dir: &Path,
+    binary: &Binary,
+    mut on_line: impl FnMut(&str),
+) -> Result<String> {
+    let _ = std::fs::remove_dir_all(dir);
+    std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+
+    let archive = dir.join(archive_name(&binary.archive));
+    on_line(&format!("downloading {}", binary.archive));
+    let digest = download(&binary.archive, &archive, &mut on_line)?;
+
+    match &binary.sha256 {
+        Some(want) if !want.eq_ignore_ascii_case(&digest) => {
+            bail!("checksum mismatch — expected {want}, got {digest}")
+        }
+        Some(_) => on_line("checksum ok"),
+        // Roughly half the catalog publishes none. The registry is the trust
+        // anchor either way: it is what handed us the URL.
+        None => on_line("no checksum published — installing unverified"),
+    }
+
+    unpack(&archive, dir, &mut on_line)?;
+    let _ = std::fs::remove_file(&archive);
+
+    let command = utils::contained(dir, &binary.cmd)?;
+    if !command.exists() {
+        bail!("{} is missing after unpacking", command.display());
+    }
+    make_executable(&command)?;
+    on_line("installed");
+    Ok(command.display().to_string())
+}
+
+/// Stream the body to `into`, returning its hex sha256. Streamed rather than
+/// buffered: these archives run to tens of megabytes.
+fn download(url: &str, into: &Path, on_line: &mut impl FnMut(&str)) -> Result<String> {
+    let mut resp = ureq::get(url)
+        .call()
+        .with_context(|| format!("fetching {url}"))?;
+    let mut reader = resp.body_mut().as_reader();
+    let mut file =
+        std::fs::File::create(into).with_context(|| format!("creating {}", into.display()))?;
+
+    let mut hasher = Sha256::new();
+    let mut buf = vec![0u8; 64 * 1024];
+    let mut total = 0u64;
+    let mut announced = 0u64;
+    loop {
+        let n = reader.read(&mut buf).context("reading the download")?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+        file.write_all(&buf[..n]).context("writing the download")?;
+        total += n as u64;
+        // Every few megabytes, so a long download is visibly moving without
+        // flooding whoever is reading these lines.
+        if total - announced >= 8 * 1024 * 1024 {
+            announced = total;
+            on_line(&format!("downloaded {} MB", total / (1024 * 1024)));
+        }
+    }
+    file.flush().context("flushing the download")?;
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+/// Unpack into `dir`. `tar` reads every format the registry publishes when it is
+/// libarchive's (macOS, Windows 10+); GNU tar handles the compressed tarballs
+/// and leaves zip to `unzip`.
+fn unpack(archive: &Path, dir: &Path, on_line: &mut impl FnMut(&str)) -> Result<()> {
+    let is_zip = archive
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("zip"));
+    if utils::which("tar").is_some() {
+        on_line("unpacking");
+        let out = Command::new("tar")
+            .arg("-xf")
+            .arg(archive)
+            .arg("-C")
+            .arg(dir)
+            .output()
+            .context("running tar")?;
+        if out.status.success() {
+            return Ok(());
+        }
+        if !is_zip {
+            bail!(
+                "tar failed: {}",
+                String::from_utf8_lossy(&out.stderr).trim()
+            );
+        }
+    }
+    if is_zip && utils::which("unzip").is_some() {
+        on_line("unpacking with unzip");
+        let out = Command::new("unzip")
+            .args(["-q", "-o"])
+            .arg(archive)
+            .arg("-d")
+            .arg(dir)
+            .output()
+            .context("running unzip")?;
+        if out.status.success() {
+            return Ok(());
+        }
+        bail!(
+            "unzip failed: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    bail!(
+        "no tool to unpack {} — install {}",
+        archive.display(),
+        if is_zip { "tar or unzip" } else { "tar" }
+    )
+}
+
+/// Archives usually carry the bit already; a zip need not.
+fn make_executable(path: &Path) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(path)?.permissions();
+        if perms.mode() & 0o111 == 0 {
+            perms.set_mode(0o755);
+            std::fs::set_permissions(path, perms)
+                .with_context(|| format!("marking {} executable", path.display()))?;
+        }
+    }
+    #[cfg(not(unix))]
+    let _ = path;
+    Ok(())
+}
+
+/// The archive's own filename, which is what tells `unpack` the format. Falls
+/// back to a neutral name for a URL that ends in a path segment we can't read.
+fn archive_name(url: &str) -> String {
+    url.rsplit('/')
+        .next()
+        .filter(|name| !name.is_empty())
+        .map(|name| name.split(['?', '#']).next().unwrap_or(name).to_owned())
+        .unwrap_or_else(|| "archive".to_owned())
 }
 
 /// The executable npm linked for `package`, read from the installed package's

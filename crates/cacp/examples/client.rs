@@ -23,7 +23,7 @@ impl Client for Ui {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let (agent, _child) = cacp::spawn(Command::new("my-agent").arg("--acp"), Arc::new(Ui))?;
+    let (agent, _child) = cacp::spawn(Command::new("my-agent").arg("--acp"), Arc::new(Ui), None)?;
 
     agent
         .initialize(schema::InitializeRequest::new(Default::default()))

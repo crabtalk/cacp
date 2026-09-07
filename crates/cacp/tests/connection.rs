@@ -69,8 +69,8 @@ impl Client for Ui {
 
 fn connect(agent: Fake) -> cacp::AgentConn {
     let (client_end, agent_end) = tokio::io::duplex(8 * 1024);
-    cacp::serve(agent_end, Arc::new(agent));
-    cacp::connect(client_end, Arc::new(Ui))
+    cacp::serve(agent_end, Arc::new(agent), None);
+    cacp::connect(client_end, Arc::new(Ui), None)
 }
 
 #[tokio::test]

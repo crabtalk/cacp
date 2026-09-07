@@ -16,7 +16,7 @@ let installed = match Installed::find(&data_dir, &agent.id) {
 
 let mut command = Command::new(&installed.command);
 command.args(&installed.args).current_dir(&cwd);
-let (conn, _child) = cacp::spawn(&mut command, client)?;
+let (conn, _child) = cacp::spawn(&mut command, client, None)?;
 ```
 
 It carries no runtime and does not depend on `cacp`. The working directory, the
