@@ -6,6 +6,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/cacp"
+readme = "../../README.md"
+keywords = ["acp", "agent", "protocol", "jsonrpc", "ai"]
+categories = ["api-bindings", "asynchronous", "network-programming"]
 
 [features]
 default = ["client", "server"]
