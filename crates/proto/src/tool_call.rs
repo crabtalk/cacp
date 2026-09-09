@@ -184,9 +184,6 @@ impl ToolCallStatus {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
-// Boxing the wide variant would put an allocation on every content block an
-// agent streams, to save a few words on the ones it does not.
-#[allow(clippy::large_enum_variant)]
 pub enum ToolCallContent {
     Content {
         content: ContentBlock,

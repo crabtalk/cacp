@@ -230,3 +230,23 @@ fn a_null_request_id_is_a_request_id() {
     round(proto::RequestId::Null, json!(null));
     round(proto::RequestId::Num(7), json!(7));
 }
+
+#[test]
+fn boxed_annotations_stay_flat_on_the_wire() {
+    round(
+        proto::ContentBlock::Text(proto::TextContent {
+            text: "hi".into(),
+            annotations: Some(Box::new(proto::Annotations {
+                audience: Some(vec![proto::Role::User]),
+                priority: Some(0.5),
+                ..Default::default()
+            })),
+            meta: None,
+        }),
+        json!({
+            "type": "text",
+            "text": "hi",
+            "annotations": {"audience": ["user"], "priority": 0.5},
+        }),
+    );
+}
