@@ -41,7 +41,7 @@
 <a href=#41 id=41 data-nosnippet>41</a></span><span class="kw">pub struct </span>TextContent {
 <a href=#42 id=42 data-nosnippet>42</a>    <span class="kw">pub </span>text: String,
 <a href=#43 id=43 data-nosnippet>43</a>    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
-<a href=#44 id=44 data-nosnippet>44</a>    </span><span class="kw">pub </span>annotations: <span class="prelude-ty">Option</span>&lt;Annotations&gt;,
+<a href=#44 id=44 data-nosnippet>44</a>    </span><span class="kw">pub </span>annotations: <span class="prelude-ty">Option</span>&lt;Box&lt;Annotations&gt;&gt;,
 <a href=#45 id=45 data-nosnippet>45</a>    <span class="attr">#[serde(default, rename = <span class="string">"_meta"</span>, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
 <a href=#46 id=46 data-nosnippet>46</a>    </span><span class="kw">pub </span>meta: <span class="prelude-ty">Option</span>&lt;Meta&gt;,
 <a href=#47 id=47 data-nosnippet>47</a>}
@@ -55,7 +55,7 @@
 <a href=#55 id=55 data-nosnippet>55</a>    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
 <a href=#56 id=56 data-nosnippet>56</a>    </span><span class="kw">pub </span>uri: <span class="prelude-ty">Option</span>&lt;String&gt;,
 <a href=#57 id=57 data-nosnippet>57</a>    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
-<a href=#58 id=58 data-nosnippet>58</a>    </span><span class="kw">pub </span>annotations: <span class="prelude-ty">Option</span>&lt;Annotations&gt;,
+<a href=#58 id=58 data-nosnippet>58</a>    </span><span class="kw">pub </span>annotations: <span class="prelude-ty">Option</span>&lt;Box&lt;Annotations&gt;&gt;,
 <a href=#59 id=59 data-nosnippet>59</a>    <span class="attr">#[serde(default, rename = <span class="string">"_meta"</span>, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
 <a href=#60 id=60 data-nosnippet>60</a>    </span><span class="kw">pub </span>meta: <span class="prelude-ty">Option</span>&lt;Meta&gt;,
 <a href=#61 id=61 data-nosnippet>61</a>}
@@ -67,7 +67,7 @@
 <a href=#67 id=67 data-nosnippet>67</a>    </span><span class="kw">pub </span>data: String,
 <a href=#68 id=68 data-nosnippet>68</a>    <span class="kw">pub </span>mime_type: String,
 <a href=#69 id=69 data-nosnippet>69</a>    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
-<a href=#70 id=70 data-nosnippet>70</a>    </span><span class="kw">pub </span>annotations: <span class="prelude-ty">Option</span>&lt;Annotations&gt;,
+<a href=#70 id=70 data-nosnippet>70</a>    </span><span class="kw">pub </span>annotations: <span class="prelude-ty">Option</span>&lt;Box&lt;Annotations&gt;&gt;,
 <a href=#71 id=71 data-nosnippet>71</a>    <span class="attr">#[serde(default, rename = <span class="string">"_meta"</span>, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
 <a href=#72 id=72 data-nosnippet>72</a>    </span><span class="kw">pub </span>meta: <span class="prelude-ty">Option</span>&lt;Meta&gt;,
 <a href=#73 id=73 data-nosnippet>73</a>}
@@ -87,7 +87,7 @@
 <a href=#87 id=87 data-nosnippet>87</a>    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
 <a href=#88 id=88 data-nosnippet>88</a>    </span><span class="kw">pub </span>size: <span class="prelude-ty">Option</span>&lt;i64&gt;,
 <a href=#89 id=89 data-nosnippet>89</a>    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
-<a href=#90 id=90 data-nosnippet>90</a>    </span><span class="kw">pub </span>annotations: <span class="prelude-ty">Option</span>&lt;Annotations&gt;,
+<a href=#90 id=90 data-nosnippet>90</a>    </span><span class="kw">pub </span>annotations: <span class="prelude-ty">Option</span>&lt;Box&lt;Annotations&gt;&gt;,
 <a href=#91 id=91 data-nosnippet>91</a>    <span class="attr">#[serde(default, rename = <span class="string">"_meta"</span>, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
 <a href=#92 id=92 data-nosnippet>92</a>    </span><span class="kw">pub </span>meta: <span class="prelude-ty">Option</span>&lt;Meta&gt;,
 <a href=#93 id=93 data-nosnippet>93</a>}
@@ -96,7 +96,7 @@
 <a href=#96 id=96 data-nosnippet>96</a></span><span class="kw">pub struct </span>EmbeddedResource {
 <a href=#97 id=97 data-nosnippet>97</a>    <span class="kw">pub </span>resource: EmbeddedResourceResource,
 <a href=#98 id=98 data-nosnippet>98</a>    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
-<a href=#99 id=99 data-nosnippet>99</a>    </span><span class="kw">pub </span>annotations: <span class="prelude-ty">Option</span>&lt;Annotations&gt;,
+<a href=#99 id=99 data-nosnippet>99</a>    </span><span class="kw">pub </span>annotations: <span class="prelude-ty">Option</span>&lt;Box&lt;Annotations&gt;&gt;,
 <a href=#100 id=100 data-nosnippet>100</a>    <span class="attr">#[serde(default, rename = <span class="string">"_meta"</span>, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
 <a href=#101 id=101 data-nosnippet>101</a>    </span><span class="kw">pub </span>meta: <span class="prelude-ty">Option</span>&lt;Meta&gt;,
 <a href=#102 id=102 data-nosnippet>102</a>}
@@ -132,23 +132,25 @@
 <a href=#132 id=132 data-nosnippet>132</a>    </span><span class="kw">pub </span>meta: <span class="prelude-ty">Option</span>&lt;Meta&gt;,
 <a href=#133 id=133 data-nosnippet>133</a>}
 <a href=#134 id=134 data-nosnippet>134</a>
-<a href=#135 id=135 data-nosnippet>135</a><span class="attr">#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-<a href=#136 id=136 data-nosnippet>136</a>#[serde(rename_all = <span class="string">"camelCase"</span>)]
-<a href=#137 id=137 data-nosnippet>137</a></span><span class="kw">pub struct </span>Annotations {
-<a href=#138 id=138 data-nosnippet>138</a>    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
-<a href=#139 id=139 data-nosnippet>139</a>    </span><span class="kw">pub </span>audience: <span class="prelude-ty">Option</span>&lt;Vec&lt;Role&gt;&gt;,
+<a href=#135 id=135 data-nosnippet>135</a><span class="doccomment">/// Boxed wherever it is held: four fields almost nothing sets, which inline
+<a href=#136 id=136 data-nosnippet>136</a>/// would widen every content block a turn streams.
+<a href=#137 id=137 data-nosnippet>137</a></span><span class="attr">#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+<a href=#138 id=138 data-nosnippet>138</a>#[serde(rename_all = <span class="string">"camelCase"</span>)]
+<a href=#139 id=139 data-nosnippet>139</a></span><span class="kw">pub struct </span>Annotations {
 <a href=#140 id=140 data-nosnippet>140</a>    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
-<a href=#141 id=141 data-nosnippet>141</a>    </span><span class="kw">pub </span>last_modified: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#141 id=141 data-nosnippet>141</a>    </span><span class="kw">pub </span>audience: <span class="prelude-ty">Option</span>&lt;Vec&lt;Role&gt;&gt;,
 <a href=#142 id=142 data-nosnippet>142</a>    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
-<a href=#143 id=143 data-nosnippet>143</a>    </span><span class="kw">pub </span>priority: <span class="prelude-ty">Option</span>&lt;f64&gt;,
-<a href=#144 id=144 data-nosnippet>144</a>    <span class="attr">#[serde(default, rename = <span class="string">"_meta"</span>, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
-<a href=#145 id=145 data-nosnippet>145</a>    </span><span class="kw">pub </span>meta: <span class="prelude-ty">Option</span>&lt;Meta&gt;,
-<a href=#146 id=146 data-nosnippet>146</a>}
-<a href=#147 id=147 data-nosnippet>147</a>
-<a href=#148 id=148 data-nosnippet>148</a><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-<a href=#149 id=149 data-nosnippet>149</a>#[serde(rename_all = <span class="string">"camelCase"</span>)]
-<a href=#150 id=150 data-nosnippet>150</a></span><span class="kw">pub enum </span>Role {
-<a href=#151 id=151 data-nosnippet>151</a>    Assistant,
-<a href=#152 id=152 data-nosnippet>152</a>    User,
-<a href=#153 id=153 data-nosnippet>153</a>}
+<a href=#143 id=143 data-nosnippet>143</a>    </span><span class="kw">pub </span>last_modified: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#144 id=144 data-nosnippet>144</a>    <span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
+<a href=#145 id=145 data-nosnippet>145</a>    </span><span class="kw">pub </span>priority: <span class="prelude-ty">Option</span>&lt;f64&gt;,
+<a href=#146 id=146 data-nosnippet>146</a>    <span class="attr">#[serde(default, rename = <span class="string">"_meta"</span>, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
+<a href=#147 id=147 data-nosnippet>147</a>    </span><span class="kw">pub </span>meta: <span class="prelude-ty">Option</span>&lt;Meta&gt;,
+<a href=#148 id=148 data-nosnippet>148</a>}
+<a href=#149 id=149 data-nosnippet>149</a>
+<a href=#150 id=150 data-nosnippet>150</a><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+<a href=#151 id=151 data-nosnippet>151</a>#[serde(rename_all = <span class="string">"camelCase"</span>)]
+<a href=#152 id=152 data-nosnippet>152</a></span><span class="kw">pub enum </span>Role {
+<a href=#153 id=153 data-nosnippet>153</a>    Assistant,
+<a href=#154 id=154 data-nosnippet>154</a>    User,
+<a href=#155 id=155 data-nosnippet>155</a>}
 </code></pre></div></section></main></body></html>

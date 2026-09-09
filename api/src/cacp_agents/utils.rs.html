@@ -3,24 +3,33 @@
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span>anyhow::{<span class="prelude-ty">Result</span>, bail};
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::path::{Component, Path, PathBuf};
 <a href=#5 id=5 data-nosnippet>5</a>
-<a href=#6 id=6 data-nosnippet>6</a><span class="doccomment">/// The first `program` on `PATH`.
-<a href=#7 id=7 data-nosnippet>7</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>which(program: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;PathBuf&gt; {
-<a href=#8 id=8 data-nosnippet>8</a>    <span class="kw">let </span>path = std::env::var_os(<span class="string">"PATH"</span>)<span class="question-mark">?</span>;
-<a href=#9 id=9 data-nosnippet>9</a>    std::env::split_paths(<span class="kw-2">&amp;</span>path)
-<a href=#10 id=10 data-nosnippet>10</a>        .map(|dir| dir.join(program))
-<a href=#11 id=11 data-nosnippet>11</a>        .find(|candidate| candidate.is_file())
-<a href=#12 id=12 data-nosnippet>12</a>}
-<a href=#13 id=13 data-nosnippet>13</a>
-<a href=#14 id=14 data-nosnippet>14</a><span class="doccomment">/// `dir` joined with a relative path the registry supplied — at least one
-<a href=#15 id=15 data-nosnippet>15</a>/// component, every one a plain name. An id or a `cmd` that climbs out, or an
-<a href=#16 id=16 data-nosnippet>16</a>/// empty one naming `dir` itself, would aim an install — or the
-<a href=#17 id=17 data-nosnippet>17</a>/// `remove_dir_all` that undoes one — somewhere it was never given.
-<a href=#18 id=18 data-nosnippet>18</a></span><span class="kw">pub fn </span>contained(dir: <span class="kw-2">&amp;</span>Path, rel: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf&gt; {
-<a href=#19 id=19 data-nosnippet>19</a>    <span class="kw">let </span>rel = Path::new(rel.trim_start_matches(<span class="string">"./"</span>));
-<a href=#20 id=20 data-nosnippet>20</a>    <span class="kw">let </span><span class="kw-2">mut </span>parts = rel.components().peekable();
-<a href=#21 id=21 data-nosnippet>21</a>    <span class="kw">if </span>parts.peek().is_none() || !parts.all(|c| <span class="macro">matches!</span>(c, Component::Normal(<span class="kw">_</span>))) {
-<a href=#22 id=22 data-nosnippet>22</a>        <span class="macro">bail!</span>(<span class="string">"{} is not a path inside {}"</span>, rel.display(), dir.display());
-<a href=#23 id=23 data-nosnippet>23</a>    }
-<a href=#24 id=24 data-nosnippet>24</a>    <span class="prelude-val">Ok</span>(dir.join(rel))
-<a href=#25 id=25 data-nosnippet>25</a>}
+<a href=#6 id=6 data-nosnippet>6</a><span class="doccomment">/// `Command` for `program` as [`which::which`] found it. A Windows program is
+<a href=#7 id=7 data-nosnippet>7</a>/// run through the file its extension names — `npm.cmd` through `cmd.exe`,
+<a href=#8 id=8 data-nosnippet>8</a>/// which the standard library arranges — and without a console window of its
+<a href=#9 id=9 data-nosnippet>9</a>/// own, which a GUI process would otherwise be handed for every child it
+<a href=#10 id=10 data-nosnippet>10</a>/// starts.
+<a href=#11 id=11 data-nosnippet>11</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>command(program: <span class="kw-2">&amp;</span>Path) -&gt; std::process::Command {
+<a href=#12 id=12 data-nosnippet>12</a>    <span class="attr">#[cfg_attr(not(windows), allow(unused_mut))]
+<a href=#13 id=13 data-nosnippet>13</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>command = std::process::Command::new(program);
+<a href=#14 id=14 data-nosnippet>14</a>    <span class="attr">#[cfg(windows)]
+<a href=#15 id=15 data-nosnippet>15</a>    </span>{
+<a href=#16 id=16 data-nosnippet>16</a>        <span class="kw">use </span>std::os::windows::process::CommandExt <span class="kw">as _</span>;
+<a href=#17 id=17 data-nosnippet>17</a>        <span class="kw">const </span>CREATE_NO_WINDOW: u32 = <span class="number">0x0800_0000</span>;
+<a href=#18 id=18 data-nosnippet>18</a>        command.creation_flags(CREATE_NO_WINDOW);
+<a href=#19 id=19 data-nosnippet>19</a>    }
+<a href=#20 id=20 data-nosnippet>20</a>    command
+<a href=#21 id=21 data-nosnippet>21</a>}
+<a href=#22 id=22 data-nosnippet>22</a>
+<a href=#23 id=23 data-nosnippet>23</a><span class="doccomment">/// `dir` joined with a relative path the registry supplied — at least one
+<a href=#24 id=24 data-nosnippet>24</a>/// component, every one a plain name. An id or a `cmd` that climbs out, or an
+<a href=#25 id=25 data-nosnippet>25</a>/// empty one naming `dir` itself, would aim an install — or the
+<a href=#26 id=26 data-nosnippet>26</a>/// `remove_dir_all` that undoes one — somewhere it was never given.
+<a href=#27 id=27 data-nosnippet>27</a></span><span class="kw">pub fn </span>contained(dir: <span class="kw-2">&amp;</span>Path, rel: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf&gt; {
+<a href=#28 id=28 data-nosnippet>28</a>    <span class="kw">let </span>rel = Path::new(rel.trim_start_matches(<span class="string">"./"</span>));
+<a href=#29 id=29 data-nosnippet>29</a>    <span class="kw">let </span><span class="kw-2">mut </span>parts = rel.components().peekable();
+<a href=#30 id=30 data-nosnippet>30</a>    <span class="kw">if </span>parts.peek().is_none() || !parts.all(|c| <span class="macro">matches!</span>(c, Component::Normal(<span class="kw">_</span>))) {
+<a href=#31 id=31 data-nosnippet>31</a>        <span class="macro">bail!</span>(<span class="string">"{} is not a path inside {}"</span>, rel.display(), dir.display());
+<a href=#32 id=32 data-nosnippet>32</a>    }
+<a href=#33 id=33 data-nosnippet>33</a>    <span class="prelude-val">Ok</span>(dir.join(rel))
+<a href=#34 id=34 data-nosnippet>34</a>}
 </code></pre></div></section></main></body></html>

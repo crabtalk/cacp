@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-e4ad682b.js";
+            window.path_to_searchindex_js = "searchindex-fd04eb06.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-2eaed1e0.js"></script>
@@ -219,11 +219,11 @@ a working peer — it just advertises less.</p>
 </div>
 <p>Depend on <code>cacp-proto</code> alone if all you do is read and write ACP JSON — it is
 data only, and pulls in no async runtime.</p>
-<pre><code class="language-toml">cacp = "0.1.0"
+<pre><code class="language-toml">cacp = "0.1.1"
 </code></pre>
 <p>Each role is a feature and both are on by default. Turn off the one you do not
 implement:</p>
-<pre><code class="language-toml">cacp = { version = "0.1.0", default-features = false, features = ["client"] }
+<pre><code class="language-toml">cacp = { version = "0.1.1", default-features = false, features = ["client"] }
 </code></pre>
 <div class="table-wrapper">
 <table>
