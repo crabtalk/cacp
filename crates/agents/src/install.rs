@@ -11,7 +11,7 @@ use std::{
     collections::BTreeMap,
     io::{BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::Stdio,
 };
 
 /// A local installation: the command to spawn, its arguments, and anything the
@@ -105,14 +105,17 @@ pub(crate) fn install_npm(
     package: &str,
     mut on_line: impl FnMut(&str),
 ) -> Result<String> {
-    if utils::which("npm").is_none() {
+    // Resolved rather than named: on Windows `npm` is `npm.cmd`, which
+    // `Command::new("npm")` would not find. `which` does the lookup a shell
+    // does, `PATHEXT` and all.
+    let Ok(npm) = which::which("npm") else {
         bail!("npm was not found on PATH — install Node.js to add agents");
-    }
+    };
     let _ = std::fs::remove_dir_all(dir);
     std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
 
     on_line(&format!("npm install {package}"));
-    let mut child = Command::new("npm")
+    let mut child = utils::command(&npm)
         .arg("install")
         .arg("--prefix")
         .arg(dir)
@@ -174,8 +177,8 @@ pub(crate) fn install_npm(
     Ok(command)
 }
 
-/// Download a release archive into `dir`, unpack it there, and return the
-/// executable named by [`Binary::cmd`].
+/// Download a release into `dir`, unpack it there if it is an archive, and
+/// return the executable named by [`Binary::cmd`].
 ///
 /// The archive is fetched with an HTTP client rather than handed to the OS,
 /// which is what keeps macOS from stamping `com.apple.quarantine` on it — the
@@ -189,7 +192,8 @@ pub(crate) fn install_binary(
     let _ = std::fs::remove_dir_all(dir);
     std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
 
-    let archive = dir.join(archive_name(&binary.archive));
+    let name = archive_name(&binary.archive);
+    let archive = dir.join(&name);
     on_line(&format!("downloading {}", binary.archive));
     let digest = download(&binary.archive, &archive, &mut on_line)?;
 
@@ -203,8 +207,15 @@ pub(crate) fn install_binary(
         None => on_line("no checksum published — installing unverified"),
     }
 
-    unpack(&archive, dir, &mut on_line)?;
-    let _ = std::fs::remove_file(&archive);
+    // A few agents publish the executable itself rather than an archive around
+    // it, in which case `cmd` names the file the download already landed in and
+    // there is nothing to unpack or clean up.
+    if is_archive(&name) {
+        unpack(&archive, dir, &mut on_line)?;
+        let _ = std::fs::remove_file(&archive);
+    } else {
+        on_line("downloaded a bare executable");
+    }
 
     let command = utils::contained(dir, &binary.cmd)?;
     if !command.exists() {
@@ -255,9 +266,9 @@ fn unpack(archive: &Path, dir: &Path, on_line: &mut impl FnMut(&str)) -> Result<
     let is_zip = archive
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("zip"));
-    if utils::which("tar").is_some() {
+    if let Ok(tar) = which::which("tar") {
         on_line("unpacking");
-        let out = Command::new("tar")
+        let out = utils::command(&tar)
             .arg("-xf")
             .arg(archive)
             .arg("-C")
@@ -274,9 +285,9 @@ fn unpack(archive: &Path, dir: &Path, on_line: &mut impl FnMut(&str)) -> Result<
             );
         }
     }
-    if is_zip && utils::which("unzip").is_some() {
+    if is_zip && let Ok(unzip) = which::which("unzip") {
         on_line("unpacking with unzip");
-        let out = Command::new("unzip")
+        let out = utils::command(&unzip)
             .args(["-q", "-o"])
             .arg(archive)
             .arg("-d")
@@ -315,6 +326,17 @@ fn make_executable(path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Whether the download is an archive at all, read from the filename the way
+/// `unpack` reads the format. Anything else is the executable itself.
+fn is_archive(name: &str) -> bool {
+    const SUFFIXES: [&str; 11] = [
+        ".zip", ".tar", ".tar.gz", ".tgz", ".tar.bz2", ".tbz2", ".tar.xz", ".txz", ".gz", ".bz2",
+        ".xz",
+    ];
+    let name = name.to_ascii_lowercase();
+    SUFFIXES.iter().any(|suffix| name.ends_with(suffix))
+}
+
 /// The archive's own filename, which is what tells `unpack` the format. Falls
 /// back to a neutral name for a URL that ends in a path segment we can't read.
 fn archive_name(url: &str) -> String {
@@ -345,8 +367,52 @@ fn binary_path(dir: &Path, package: &str) -> Result<String> {
     };
 
     let bin = dir.join("node_modules").join(".bin").join(&bin_name);
+    // npm writes three launchers for each executable: a POSIX shell script
+    // under the bare name, and `.cmd` and `.ps1` beside it for Windows. The
+    // bare one is the command everywhere but Windows, where it is a script
+    // nothing can run and the `.cmd` is what a terminal would pick.
+    let bin = if cfg!(windows) {
+        let mut cmd = bin.clone().into_os_string();
+        cmd.push(".cmd");
+        let cmd = PathBuf::from(cmd);
+        if cmd.exists() { cmd } else { bin }
+    } else {
+        bin
+    };
     if !bin.exists() {
         bail!("{} is missing after install", bin.display());
     }
     Ok(bin.display().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{archive_name, is_archive};
+
+    #[test]
+    fn reads_the_filename_out_of_a_url() {
+        assert_eq!(
+            archive_name("https://host/v1/goose.tar.bz2"),
+            "goose.tar.bz2"
+        );
+        assert_eq!(archive_name("https://host/kilo.zip?token=x"), "kilo.zip");
+        assert_eq!(archive_name("https://host/"), "archive");
+    }
+
+    #[test]
+    fn tells_an_archive_from_a_bare_executable() {
+        for name in [
+            "goose-x86_64-unknown-linux-gnu.tar.bz2",
+            "kilo-windows-x64.zip",
+            "coco-1.0.73%2B180523-windows-amd64.tar.gz",
+            "AGENT.TGZ",
+        ] {
+            assert!(is_archive(name), "{name} is an archive");
+        }
+        // Both shapes sigit publishes: a naked binary, with an extension and
+        // without, is the executable itself.
+        for name in ["sigit-win-amd64.exe", "sigit-linux-amd64"] {
+            assert!(!is_archive(name), "{name} is not an archive");
+        }
+    }
 }

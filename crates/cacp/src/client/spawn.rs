@@ -16,6 +16,10 @@ use tokio::{
 /// Only stdin and stdout are taken; stderr is left as the caller configured it,
 /// since a TUI usually wants it captured and a CLI usually does not. The agent
 /// is killed when the returned [`Child`] is dropped.
+///
+/// That reaches the process spawned and no further. On Windows an agent
+/// started through a `.cmd` launcher is a `cmd.exe` holding the real process,
+/// which outlives it: put the child in a job object to end the whole tree.
 pub fn spawn<C: Client>(
     command: &mut Command,
     client: Arc<C>,

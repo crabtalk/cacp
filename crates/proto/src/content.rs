@@ -41,7 +41,7 @@ impl<T: Into<String>> From<T> for ContentBlock {
 pub struct TextContent {
     pub text: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub annotations: Option<Annotations>,
+    pub annotations: Option<Box<Annotations>>,
     #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
     pub meta: Option<Meta>,
 }
@@ -55,7 +55,7 @@ pub struct ImageContent {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub uri: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub annotations: Option<Annotations>,
+    pub annotations: Option<Box<Annotations>>,
     #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
     pub meta: Option<Meta>,
 }
@@ -67,7 +67,7 @@ pub struct AudioContent {
     pub data: String,
     pub mime_type: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub annotations: Option<Annotations>,
+    pub annotations: Option<Box<Annotations>>,
     #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
     pub meta: Option<Meta>,
 }
@@ -87,7 +87,7 @@ pub struct ResourceLink {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub annotations: Option<Annotations>,
+    pub annotations: Option<Box<Annotations>>,
     #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
     pub meta: Option<Meta>,
 }
@@ -96,7 +96,7 @@ pub struct ResourceLink {
 pub struct EmbeddedResource {
     pub resource: EmbeddedResourceResource,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub annotations: Option<Annotations>,
+    pub annotations: Option<Box<Annotations>>,
     #[serde(default, rename = "_meta", skip_serializing_if = "Option::is_none")]
     pub meta: Option<Meta>,
 }
@@ -132,6 +132,8 @@ pub struct BlobResourceContents {
     pub meta: Option<Meta>,
 }
 
+/// Boxed wherever it is held: four fields almost nothing sets, which inline
+/// would widen every content block a turn streams.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Annotations {

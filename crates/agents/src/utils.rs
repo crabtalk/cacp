@@ -3,12 +3,21 @@
 use anyhow::{Result, bail};
 use std::path::{Component, Path, PathBuf};
 
-/// The first `program` on `PATH`.
-pub(crate) fn which(program: &str) -> Option<PathBuf> {
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|dir| dir.join(program))
-        .find(|candidate| candidate.is_file())
+/// `Command` for `program` as [`which::which`] found it. A Windows program is
+/// run through the file its extension names — `npm.cmd` through `cmd.exe`,
+/// which the standard library arranges — and without a console window of its
+/// own, which a GUI process would otherwise be handed for every child it
+/// starts.
+pub(crate) fn command(program: &Path) -> std::process::Command {
+    #[cfg_attr(not(windows), allow(unused_mut))]
+    let mut command = std::process::Command::new(program);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt as _;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    command
 }
 
 /// `dir` joined with a relative path the registry supplied — at least one
