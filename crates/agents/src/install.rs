@@ -106,8 +106,9 @@ pub(crate) fn install_npm(
     mut on_line: impl FnMut(&str),
 ) -> Result<String> {
     // Resolved rather than named: on Windows `npm` is `npm.cmd`, which
-    // `Command::new("npm")` would not find.
-    let Some(npm) = utils::which("npm") else {
+    // `Command::new("npm")` would not find. `which` does the lookup a shell
+    // does, `PATHEXT` and all.
+    let Ok(npm) = which::which("npm") else {
         bail!("npm was not found on PATH — install Node.js to add agents");
     };
     let _ = std::fs::remove_dir_all(dir);
@@ -265,7 +266,7 @@ fn unpack(archive: &Path, dir: &Path, on_line: &mut impl FnMut(&str)) -> Result<
     let is_zip = archive
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("zip"));
-    if let Some(tar) = utils::which("tar") {
+    if let Ok(tar) = which::which("tar") {
         on_line("unpacking");
         let out = utils::command(&tar)
             .arg("-xf")
@@ -284,7 +285,7 @@ fn unpack(archive: &Path, dir: &Path, on_line: &mut impl FnMut(&str)) -> Result<
             );
         }
     }
-    if is_zip && let Some(unzip) = utils::which("unzip") {
+    if is_zip && let Ok(unzip) = which::which("unzip") {
         on_line("unpacking with unzip");
         let out = utils::command(&unzip)
             .args(["-q", "-o"])
