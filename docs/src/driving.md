@@ -28,3 +28,20 @@ Two different cancellations, easy to confuse:
   `$/cancel_request` and stops working on something nobody is waiting for.
 
 [`Client`]: https://docs.rs/cacp/latest/cacp/trait.Client.html
+
+## Forking from saved history
+
+`AgentConn::fork_session_from_history(request, &history, before)` opens a fresh
+session using the entries before an exclusive index. Use `0` for an empty fork
+or `history.len()` for all entries. The source session is never contacted.
+
+Each `HistoryEntry` carries a user, agent, or tool role and typed content blocks.
+The returned `HistoryFork` stays idle until `prompt` is called; that first prompt
+includes the saved context. Later successful turns omit it. Persist the session
+and `pending_history()` together and use `HistoryFork::restore` after reconnecting.
+
+This uses ordinary `session/new` and `session/prompt`, so it requires no fork
+extension. History is supplied as prompt context, not native agent state; files
+are not rolled back. Content capabilities and context limits still apply.
+On a transport error, reconcile the agent state before retrying: it may already
+have received the context. Native `fork_session` remains available separately.
