@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["connect","connect_on","spawn"],"struct":["AgentConn"],"trait":["Client"]};
+window.SIDEBAR_ITEMS = {"enum":["HistoryRole"],"fn":["connect","connect_on","spawn"],"struct":["AgentConn","HistoryEntry","HistoryFork"],"trait":["Client"]};

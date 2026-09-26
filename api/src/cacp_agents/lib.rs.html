@@ -27,13 +27,15 @@
 <a href=#27 id=27 data-nosnippet>27</a>//!
 <a href=#28 id=28 data-nosnippet>28</a>//! [`cacp::spawn`]: https://docs.rs/cacp
 <a href=#29 id=29 data-nosnippet>29</a>
-<a href=#30 id=30 data-nosnippet>30</a></span><span class="kw">pub use </span>install::{Installed, package_name};
-<a href=#31 id=31 data-nosnippet>31</a><span class="kw">pub use </span>registry::{Agent, Distribution, Registry};
-<a href=#32 id=32 data-nosnippet>32</a><span class="kw">pub use </span>utils::contained;
-<a href=#33 id=33 data-nosnippet>33</a>
-<a href=#34 id=34 data-nosnippet>34</a><span class="kw">pub mod </span>mcp;
-<a href=#35 id=35 data-nosnippet>35</a><span class="kw">pub mod </span>registry;
-<a href=#36 id=36 data-nosnippet>36</a>
-<a href=#37 id=37 data-nosnippet>37</a><span class="kw">mod </span>install;
-<a href=#38 id=38 data-nosnippet>38</a><span class="kw">mod </span>utils;
+<a href=#30 id=30 data-nosnippet>30</a></span><span class="attr">#[cfg(feature = <span class="string">"install"</span>)]
+<a href=#31 id=31 data-nosnippet>31</a></span><span class="kw">pub use </span>install::Installed;
+<a href=#32 id=32 data-nosnippet>32</a><span class="kw">pub use </span>registry::{Agent, Distribution, Registry};
+<a href=#33 id=33 data-nosnippet>33</a><span class="kw">pub use </span>utils::{contained, package_name};
+<a href=#34 id=34 data-nosnippet>34</a>
+<a href=#35 id=35 data-nosnippet>35</a><span class="kw">pub mod </span>mcp;
+<a href=#36 id=36 data-nosnippet>36</a><span class="kw">pub mod </span>registry;
+<a href=#37 id=37 data-nosnippet>37</a>
+<a href=#38 id=38 data-nosnippet>38</a><span class="attr">#[cfg(feature = <span class="string">"install"</span>)]
+<a href=#39 id=39 data-nosnippet>39</a></span><span class="kw">mod </span>install;
+<a href=#40 id=40 data-nosnippet>40</a><span class="kw">mod </span>utils;
 </code></pre></div></section></main></body></html>

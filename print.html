@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fd04eb06.js";
+            window.path_to_searchindex_js = "searchindex-669e7e45.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-2eaed1e0.js"></script>
@@ -363,6 +363,19 @@ dropping it.</li>
 <li><strong>Abandoning one request</strong> is what dropping its future does: the peer gets
 <code>$/cancel_request</code> and stops working on something nobody is waiting for.</li>
 </ul>
+<h2 id="forking-from-saved-history"><a class="header" href="#forking-from-saved-history">Forking from saved history</a></h2>
+<p><code>AgentConn::fork_session_from_history(request, &amp;history, before)</code> opens a fresh
+session using the entries before an exclusive index. Use <code>0</code> for an empty fork
+or <code>history.len()</code> for all entries. The source session is never contacted.</p>
+<p>Each <code>HistoryEntry</code> carries a user, agent, or tool role and typed content blocks.
+The returned <code>HistoryFork</code> stays idle until <code>prompt</code> is called; that first prompt
+includes the saved context. Later successful turns omit it. Persist the session
+and <code>pending_history()</code> together and use <code>HistoryFork::restore</code> after reconnecting.</p>
+<p>This uses ordinary <code>session/new</code> and <code>session/prompt</code>, so it requires no fork
+extension. History is supplied as prompt context, not native agent state; files
+are not rolled back. Content capabilities and context limits still apply.
+On a transport error, reconcile the agent state before retrying: it may already
+have received the context. Native <code>fork_session</code> remains available separately.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="an-event-loop-instead-of-a-trait"><a class="header" href="#an-event-loop-instead-of-a-trait">An event loop instead of a trait</a></h1>
 <p>A frontend has a loop already, so <code>cacp-events</code> hands it one rather than a trait
