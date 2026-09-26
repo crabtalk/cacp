@@ -8,6 +8,7 @@ use std::path::{Component, Path, PathBuf};
 /// which the standard library arranges — and without a console window of its
 /// own, which a GUI process would otherwise be handed for every child it
 /// starts.
+#[cfg(feature = "install")]
 pub(crate) fn command(program: &Path) -> std::process::Command {
     #[cfg_attr(not(windows), allow(unused_mut))]
     let mut command = std::process::Command::new(program);
@@ -31,4 +32,13 @@ pub fn contained(dir: &Path, rel: &str) -> Result<PathBuf> {
         bail!("{} is not a path inside {}", rel.display(), dir.display());
     }
     Ok(dir.join(rel))
+}
+
+/// The package name in a spec like `@scope/name@1.2.3` — the version separator
+/// is the last `@` that isn't the scope's leading one.
+pub fn package_name(spec: &str) -> &str {
+    match spec.rfind('@') {
+        Some(ix) if ix > 0 => &spec[..ix],
+        _ => spec,
+    }
 }

@@ -27,12 +27,14 @@
 //!
 //! [`cacp::spawn`]: https://docs.rs/cacp
 
-pub use install::{Installed, package_name};
+#[cfg(feature = "install")]
+pub use install::Installed;
 pub use registry::{Agent, Distribution, Registry};
-pub use utils::contained;
+pub use utils::{contained, package_name};
 
 pub mod mcp;
 pub mod registry;
 
+#[cfg(feature = "install")]
 mod install;
 mod utils;

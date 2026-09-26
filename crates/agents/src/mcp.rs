@@ -3,17 +3,21 @@
 //! Searching is server-side and live — the catalog runs to thousands of
 //! entries, so there is nothing to cache locally.
 
+#[cfg(feature = "install")]
 use crate::install;
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use serde::Deserialize;
-use std::{
-    collections::HashSet,
-    path::{Path, PathBuf},
+use std::collections::HashSet;
+#[cfg(feature = "install")]
+use {
+    anyhow::bail,
+    std::path::{Path, PathBuf},
 };
 
 pub const SEARCH_URL: &str = "https://registry.modelcontextprotocol.io/v0/servers";
 
 /// How many results one search returns.
+#[cfg(feature = "install")]
 const SEARCH_LIMIT: usize = 30;
 
 /// One MCP server from the registry.
@@ -50,6 +54,7 @@ impl Server {
 
     /// Make this server launchable: npm packages are installed and their
     /// executable returned; remote servers need nothing, and give `None`.
+    #[cfg(feature = "install")]
     pub fn install(&self, data_dir: &Path, on_line: impl FnMut(&str)) -> Result<Option<String>> {
         match &self.distribution {
             Distribution::Npm { package } => {
@@ -168,6 +173,7 @@ pub fn parse(body: &str) -> Result<Vec<Server>> {
 ///
 /// `version=latest` is essential: without it the registry returns every
 /// published version of every server, so one name appears many times.
+#[cfg(feature = "install")]
 pub fn search(query: &str) -> Result<Vec<Server>> {
     let mut request = ureq::get(SEARCH_URL)
         .query("limit", SEARCH_LIMIT.to_string())
@@ -191,6 +197,7 @@ fn dedupe(servers: impl Iterator<Item = Server>) -> Vec<Server> {
 }
 
 /// Where an installed MCP server lives.
+#[cfg(feature = "install")]
 fn server_dir(data_dir: &Path, id: &str) -> PathBuf {
     // Registry ids contain `/`, which would nest directories.
     data_dir.join("mcp").join(id.replace('/', "_"))

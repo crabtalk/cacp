@@ -2,16 +2,18 @@
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
+#[cfg(feature = "install")]
+use std::time::{Duration, SystemTime};
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
-    time::{Duration, SystemTime},
 };
 
 pub const REGISTRY_URL: &str =
     "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";
 
 /// How long a cached catalog is served before refetching.
+#[cfg(feature = "install")]
 const CACHE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// The catalog of known ACP agents.
@@ -204,6 +206,7 @@ fn cache_file(cache_dir: &Path) -> PathBuf {
 }
 
 /// Fetch the catalog and refresh the cache.
+#[cfg(feature = "install")]
 pub fn fetch(cache_dir: &Path) -> Result<Registry> {
     let body = ureq::get(REGISTRY_URL)
         .call()
@@ -227,6 +230,7 @@ pub fn cached(cache_dir: &Path) -> Option<Registry> {
 /// network is tried and a stale cache covers failure. `None` only when there is
 /// neither cache nor connectivity — the caller's own configured agents still
 /// work.
+#[cfg(feature = "install")]
 pub fn catalog(cache_dir: &Path) -> Option<Registry> {
     let fresh = std::fs::metadata(cache_file(cache_dir))
         .and_then(|m| m.modified())
