@@ -2,7 +2,7 @@
 
 use crate::{
     registry::{Agent, Binary, Distribution},
-    utils,
+    utils::{self, package_name},
 };
 use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
@@ -87,15 +87,6 @@ fn agent_dir(data_dir: &Path, id: &str) -> Result<PathBuf> {
 
 fn record_file(data_dir: &Path, id: &str) -> Result<PathBuf> {
     Ok(agent_dir(data_dir, id)?.join("install.json"))
-}
-
-/// The package name in a spec like `@scope/name@1.2.3` — the version separator
-/// is the last `@` that isn't the scope's leading one.
-pub fn package_name(spec: &str) -> &str {
-    match spec.rfind('@') {
-        Some(ix) if ix > 0 => &spec[..ix],
-        _ => spec,
-    }
 }
 
 /// Install one npm package into `dir` (replacing whatever was there), streaming

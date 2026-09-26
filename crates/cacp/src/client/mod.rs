@@ -17,10 +17,12 @@ use std::sync::Arc;
 use tokio::io::{AsyncBufRead, AsyncRead, AsyncWrite};
 
 pub use conn::AgentConn;
+pub use history::{HistoryEntry, HistoryFork, HistoryRole};
 pub use role::Client;
 pub use spawn::spawn;
 
 mod conn;
+mod history;
 mod role;
 mod serve;
 mod spawn;
